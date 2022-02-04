@@ -1,0 +1,20 @@
+
+grpc_helper::generate_grpc_modules!(
+    "zitadel.v1",
+    "zitadel.action.v1",
+    "zitadel.admin.v1",
+    "zitadel.app.v1",
+    "zitadel.auth.v1",
+    "zitadel.authn.v1",
+    "zitadel.change.v1",
+    "zitadel.features.v1",
+    "zitadel.idp.v1",
+    "zitadel.management.v1",
+    "zitadel.member.v1",
+    "zitadel.metadata.v1",
+    "zitadel.org.v1",
+    "zitadel.policy.v1",
+    "zitadel.project.v1",
+    "zitadel.text.v1",
+    "zitadel.user.v1",
+);
