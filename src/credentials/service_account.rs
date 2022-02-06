@@ -4,10 +4,17 @@ use jsonwebtoken::{encode, Algorithm, EncodingKey, Header};
 use reqwest::StatusCode;
 use serde::{Deserialize, Serialize};
 
-const ISSUER: &'static str = "https://issuer.zitadel.ch";
-const TOKEN_ENDPOINT: &'static str = "https://api.zitadel.ch/oauth/v2/token";
-
-#[derive(Debug, Deserialize)]
+/// A service account for [ZITADEL](https://zitadel.ch/). The service
+/// account can be loaded from a valid JSON string or from a file containing the JSON string.
+/// The account can be used to communicate with the ZITADEL API and may serve as access token
+/// provider for a gRPC service client.
+///
+/// To create a service account json, head over to the [ZITADEL console](https://console.zitadel.ch/)
+/// and execute the following steps:
+/// - create a `Service User` in your organization
+/// - Give the service user the relevant authorization (e.g. ORG_OWNER or access to a specific project)
+/// - Create a "key" in the account detail page of the service user and download it
+#[derive(Clone, Debug, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct ServiceAccount {
     user_id: String,
@@ -37,22 +44,75 @@ struct TokenAuthResponse {
 }
 
 impl ServiceAccount {
+    /// Load a [`ServiceAccount`] from a JSON file at a specific filepath.
+    ///
+    /// # Errors
+    ///
+    /// This function may return an error when [`read_to_string`] returns an error.
+    /// Further, an error may occur during the deserialization of
+    /// [`load_from_json`][ServiceAccount::load_from_json].
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use zitadel::credentials::ServiceAccount;
+    /// let service_account = ServiceAccount::load_from_file("./my_json_key.json")?;
+    /// println!("{}", service_account);
+    /// ```
     pub fn load_from_file(file_path: &str) -> Result<Self, Box<dyn std::error::Error>> {
         let data = read_to_string(file_path)?;
         ServiceAccount::load_from_json(data.as_str())
     }
 
+    /// Load a [`ServiceAccount`] from a JSON string.
+    ///
+    /// # Errors
+    ///
+    /// This method may fail if the [deserialization][serde_json::from_str] does fail.
+    /// Such an error can occur if the JSON is not formatted properly.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use zitadel::credentials::ServiceAccount;
+    /// let service_account = ServiceAccount::load_from_json(r#"{"keyId": "1337", "userId": "42", "key": "foobar"}"#)?;
+    /// println!("{}", service_account);
+    /// ```
     pub fn load_from_json(json: &str) -> Result<Self, Box<dyn std::error::Error>> {
         let sa: ServiceAccount = serde_json::from_str(json)?;
         Ok(sa)
     }
 
+    /// Authenticates the [`ServiceAccount`] against the [issuer][crate::ISSUER] to
+    /// fetch an access token.
+    ///
+    /// The function returns an access token that can be sent
+    /// to authenticate any request as the given service account. The access token
+    /// is valid for ten minutes.
+    ///
+    /// # Errors
+    ///
+    /// This method may fail when:
+    /// - The key in the service account is not a valid PEM encoded RSA private key.
+    /// - When the [token endpoint][crate::TOKEN_ENDPOINT] is not reachable.
+    /// - When any error in the request happens.
+    /// - When the response status code is **not** 200 OK.
+    /// - When the response cannot be parsed as valid JSON.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use zitadel::credentials::ServiceAccount;
+    /// let service_account = ServiceAccount::load_from_file("./my_json_key.json")?;
+    /// let access_token = service_account.authenticate().await?;
+    /// println!("{}", access_token);
+    /// ```
     pub async fn authenticate(&self) -> Result<String, Box<dyn std::error::Error>> {
         let client = reqwest::Client::new();
         let jwt = self.signed_jwt()?;
 
         let response = client
-            .post(TOKEN_ENDPOINT)
+            .post(crate::TOKEN_ENDPOINT)
             .body(serde_urlencoded::to_string(
                 JwtProfileAuthBody::new_with_jwt(&jwt),
             )?)
@@ -78,7 +138,7 @@ impl ServiceAccount {
             sub: self.user_id.to_string(),
             iat: now - 1,
             exp: now + 60,
-            aud: ISSUER.to_string(),
+            aud: crate::ISSUER.to_string(),
         }
     }
 
@@ -98,7 +158,7 @@ impl JwtProfileAuthBody {
         JwtProfileAuthBody {
             grant_type: "urn:ietf:params:oauth:grant-type:jwt-bearer".to_string(),
             assertion: jwt.to_string(),
-            scope: "openid urn:zitadel:iam:org:project:id:69234237810729019:aud".to_string(),
+            scope: format!("openid urn:zitadel:iam:org:project:id:{}:aud", crate::ZITADEL_API_ID),
         }
     }
 }

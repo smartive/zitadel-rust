@@ -1,3 +1,16 @@
+//! [gRPC](https://grpc.io/) module that contains the ZITADEL API clients and
+//! constructors for clients that directly interact with a `service account` for
+//! authentication. Beware that the root level module ("zitadel") is the entry point
+//! into the gRPC world of the API. So all relevant calls/objects/enums/others can befound
+//! in this root module.
+//!
+//! #Example
+//!
+//! You may instantiate a management client like this:
+//! ```
+//! use zitadel::grpc;
+//! let client = grpc::zitadel::management::v1::management_service_client::ManagementServiceClient::connect("https:://api.zitadel.ch");
+//! ```
 
 grpc_helper::generate_grpc_modules!(
     "zitadel.v1",
@@ -18,3 +31,9 @@ grpc_helper::generate_grpc_modules!(
     "zitadel.text.v1",
     "zitadel.user.v1",
 );
+
+// pub mod clients {
+//     pub fn lol() {
+//         let a = super::zitadel::management::v1::management_service_client::ManagementServiceClient::with_interceptor()
+//     }
+// }
