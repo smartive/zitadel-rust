@@ -31,9 +31,3 @@ grpc_helper::generate_grpc_modules!(
     "zitadel.text.v1",
     "zitadel.user.v1",
 );
-
-// pub mod clients {
-//     pub fn lol() {
-//         let a = super::zitadel::management::v1::management_service_client::ManagementServiceClient::with_interceptor()
-//     }
-// }

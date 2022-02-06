@@ -1,9 +1,13 @@
 [package]
 name = "zitadel"
+description = "An implementation of the ZITADEL gRPC API in Rust. Complemented with other useful elements such as ServiceAccount auth."
 version = "0.0.0-development"
 edition = "2021"
-
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+license = "MIT OR Apache-2.0"
+authors = ["Christoph Bühler <cbuehler@rootd.ch>"]
+repository = "https://github.com/buehler/zitadel-rust"
+keywords = ["ZITADEL", "gRPC", "clients"]
+categories = ["authentication", "api-bindings"]
 
 [dependencies]
 prost = "0.9"
