@@ -1,7 +1,8 @@
 extern crate proc_macro;
 
-use proc_macro::{TokenStream};
+use proc_macro::TokenStream;
 use std::collections::HashMap;
+
 use litrs::StringLit;
 
 #[derive(Debug)]
@@ -52,10 +53,13 @@ pub fn generate_grpc_modules(input: TokenStream) -> TokenStream {
     for package in packages {
         let mut current_module = &mut root_module;
         for group in package.split('.') {
-            current_module = current_module.children.entry(group.to_string()).or_insert(Module {
-                name: group.to_string(),
-                children: HashMap::new(),
-            });
+            current_module = current_module
+                .children
+                .entry(group.to_string())
+                .or_insert(Module {
+                    name: group.to_string(),
+                    children: HashMap::new(),
+                });
         }
     }
 
