@@ -1,6 +1,6 @@
 use std::fs::read_to_string;
 
-use jsonwebtoken::{Algorithm, encode, EncodingKey, Header};
+use jsonwebtoken::{encode, Algorithm, EncodingKey, Header};
 use reqwest::StatusCode;
 use serde::{Deserialize, Serialize};
 
@@ -41,7 +41,7 @@ struct JwtProfileAuthBody {
 #[derive(Debug, Deserialize)]
 pub(crate) struct TokenAuthResponse {
     pub(crate) access_token: String,
-    pub(crate) expires_in: i64,
+    // pub(crate) expires_in: i64,
 }
 
 impl ServiceAccount {
@@ -55,10 +55,11 @@ impl ServiceAccount {
     ///
     /// # Example
     ///
-    /// ```
+    /// ```no_run
     /// use zitadel::credentials::ServiceAccount;
     /// let service_account = ServiceAccount::load_from_file("./my_json_key.json")?;
-    /// println!("{}", service_account);
+    /// println!("{:#?}", service_account);
+    /// # Ok::<(), Box<dyn std::error::Error>>(())
     /// ```
     pub fn load_from_file(file_path: &str) -> Result<Self, Box<dyn std::error::Error>> {
         let data = read_to_string(file_path)?;
@@ -77,7 +78,8 @@ impl ServiceAccount {
     /// ```
     /// use zitadel::credentials::ServiceAccount;
     /// let service_account = ServiceAccount::load_from_json(r#"{"keyId": "1337", "userId": "42", "key": "foobar"}"#)?;
-    /// println!("{}", service_account);
+    /// println!("{:#?}", service_account);
+    /// # Ok::<(), Box<dyn std::error::Error>>(())
     /// ```
     pub fn load_from_json(json: &str) -> Result<Self, Box<dyn std::error::Error>> {
         let sa: ServiceAccount = serde_json::from_str(json)?;
@@ -102,11 +104,15 @@ impl ServiceAccount {
     ///
     /// # Example
     ///
-    /// ```
+    /// ```no_run
+    /// # #[tokio::main]
+    /// # async fn main() -> Result<(), Box<dyn std::error::Error>>{
     /// use zitadel::credentials::ServiceAccount;
     /// let service_account = ServiceAccount::load_from_file("./my_json_key.json")?;
     /// let access_token = service_account.authenticate().await?;
     /// println!("{}", access_token);
+    /// # Ok(())
+    /// # }
     /// ```
     pub async fn authenticate(&self) -> Result<String, Box<dyn std::error::Error>> {
         let result = self.token_auth().await?;
@@ -229,9 +235,9 @@ mod tests {
         let sa = ServiceAccount::load_from_json(SERVICE_ACCOUNT).unwrap();
         let claims = sa.get_claims();
 
-        assert_eq!(claims.aud, sa.user_id);
+        assert_eq!(claims.aud, crate::ISSUER);
         assert_eq!(claims.sub, sa.user_id);
-        assert_eq!(claims.iss, crate::ISSUER);
+        assert_eq!(claims.iss, sa.user_id);
     }
 
     #[test]
@@ -247,7 +253,7 @@ mod tests {
         let sa = ServiceAccount::load_from_json(SERVICE_ACCOUNT).unwrap();
         let token = sa.token_auth().await.unwrap();
         assert_ne!(token.access_token, "".to_string());
-        assert_ne!(token.expires_in, 0);
+        // assert_ne!(token.expires_in, 0);
     }
 
     #[tokio::test]
