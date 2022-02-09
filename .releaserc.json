@@ -10,6 +10,13 @@
     "@semantic-release/commit-analyzer",
     "@semantic-release/release-notes-generator",
     [
+      "@semantic-release/exec",
+      {
+        "prepareCmd": "sed -i -e 's/^version = .*/version = \"${nextRelease.version}\"/' Cargo.toml",
+        "publishCmd": "cargo publish --allow-dirty"
+      }
+    ],
+    [
       "@semantic-release/github",
       {
         "assets": [
@@ -17,13 +24,6 @@
             "path": "target/package/*.crate"
           }
         ]
-      }
-    ],
-    [
-      "@semantic-release/exec",
-      {
-        "prepareCmd": "sed -i -e 's/^version = .*/version = \"${nextRelease.version}\"/' Cargo.toml",
-        "publishCmd": "cargo publish --allow-dirty"
       }
     ]
   ]
