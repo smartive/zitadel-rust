@@ -12,6 +12,8 @@
 //! let client = grpc::zitadel::management::v1::management_service_client::ManagementServiceClient::connect("https:://api.zitadel.ch");
 //! ```
 
+#![allow(clippy::all)]
+
 grpc_helper::generate_grpc_modules!(
     "zitadel.v1",
     "zitadel.action.v1",

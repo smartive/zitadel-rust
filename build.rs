@@ -1,17 +1,17 @@
-const INCLUDES: &'static [&'static str; 4] = &[
+const INCLUDES: &[&str; 4] = &[
     "external/zitadel/proto",
     "external/protoc-gen-validate",
     "external/googleapis",
     "external/grpc-gateway",
 ];
 
-const CLIENT_PROTOS: &'static [&'static str; 3] = &[
+const CLIENT_PROTOS: &[&str; 3] = &[
     "zitadel/admin.proto",
     "zitadel/auth.proto",
     "zitadel/management.proto",
 ];
 
-const NON_CLIENT_PROTOS: &'static [&'static str; 19] = &[
+const NON_CLIENT_PROTOS: &[&str; 19] = &[
     "protoc-gen-openapiv2/options/annotations.proto",
     "protoc-gen-openapiv2/options/openapiv2.proto",
     "validate/validate.proto",
