@@ -8,9 +8,19 @@ authors = ["Christoph Bühler <cbuehler@rootd.ch>"]
 repository = "https://github.com/buehler/zitadel-rust"
 keywords = ["ZITADEL", "gRPC", "clients"]
 categories = ["authentication", "api-bindings"]
+include = [
+    "build.rs",
+    "src/**/*.rs",
+    "Cargo.toml",
+    "LICENSE*",
+    "README.md",
+    "external/zitadel/proto/**/*.proto",
+    "external/protoc-gen-validate/validate/**/*.proto",
+    "external/googleapis/google/**/*.proto",
+    "external/grpc-gateway/protoc-gen-openapiv2/**/*.proto"
+]
 
 [dependencies]
-grpc-helper = { version = "1.0.0", path = "grpc-helper" }
 jsonwebtoken = "8.0.1"
 prost = "0.9"
 prost-types = "0.9"
