@@ -135,7 +135,7 @@ impl ServiceAccount {
 
         if response.status() != StatusCode::OK {
             let result = response.text().await?;
-            return Err(Box::new(errors::TokenError(result.to_string())));
+            return Err(Box::new(errors::TokenError(result)));
         }
 
         let result = response.json::<TokenAuthResponse>().await?;
@@ -144,7 +144,7 @@ impl ServiceAccount {
     }
 
     fn get_claims(&self) -> JwtClaims {
-        let now = chrono::offset::Utc::now().timestamp();
+        let now = time::OffsetDateTime::now_utc().unix_timestamp();
         JwtClaims {
             iss: self.user_id.to_string(),
             sub: self.user_id.to_string(),
