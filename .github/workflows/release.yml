@@ -7,19 +7,12 @@ on:
 
 jobs:
   lint_and_test:
-    name: Linting and Testing
+    name: Testing
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
         with:
           submodules: true
-
-      - run: rustup component add clippy
-
-      - uses: actions-rs/clippy-check@v1
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-          args: --all-features
 
       - uses: actions-rs/toolchain@v1
         with:
