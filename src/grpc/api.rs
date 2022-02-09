@@ -14,22 +14,88 @@
 
 #![allow(clippy::all)]
 
-grpc_helper::generate_grpc_modules!(
-    "zitadel.v1",
-    "zitadel.action.v1",
-    "zitadel.admin.v1",
-    "zitadel.app.v1",
-    "zitadel.auth.v1",
-    "zitadel.authn.v1",
-    "zitadel.change.v1",
-    "zitadel.features.v1",
-    "zitadel.idp.v1",
-    "zitadel.management.v1",
-    "zitadel.member.v1",
-    "zitadel.metadata.v1",
-    "zitadel.org.v1",
-    "zitadel.policy.v1",
-    "zitadel.project.v1",
-    "zitadel.text.v1",
-    "zitadel.user.v1",
-);
+pub mod zitadel {
+    pub mod v1 {
+        tonic::include_proto!("zitadel.v1");
+    }
+    pub mod action {
+        pub mod v1 {
+            tonic::include_proto!("zitadel.action.v1");
+        }
+    }
+    pub mod admin {
+        pub mod v1 {
+            tonic::include_proto!("zitadel.admin.v1");
+        }
+    }
+    pub mod app {
+        pub mod v1 {
+            tonic::include_proto!("zitadel.app.v1");
+        }
+    }
+    pub mod auth {
+        pub mod v1 {
+            tonic::include_proto!("zitadel.auth.v1");
+        }
+    }
+    pub mod authn {
+        pub mod v1 {
+            tonic::include_proto!("zitadel.authn.v1");
+        }
+    }
+    pub mod change {
+        pub mod v1 {
+            tonic::include_proto!("zitadel.change.v1");
+        }
+    }
+    pub mod features {
+        pub mod v1 {
+            tonic::include_proto!("zitadel.features.v1");
+        }
+    }
+    pub mod idp {
+        pub mod v1 {
+            tonic::include_proto!("zitadel.idp.v1");
+        }
+    }
+    pub mod management {
+        pub mod v1 {
+            tonic::include_proto!("zitadel.management.v1");
+        }
+    }
+    pub mod member {
+        pub mod v1 {
+            tonic::include_proto!("zitadel.member.v1");
+        }
+    }
+    pub mod metadata {
+        pub mod v1 {
+            tonic::include_proto!("zitadel.metadata.v1");
+        }
+    }
+    pub mod org {
+        pub mod v1 {
+            tonic::include_proto!("zitadel.org.v1");
+        }
+    }
+    pub mod policy {
+        pub mod v1 {
+            tonic::include_proto!("zitadel.policy.v1");
+        }
+    }
+    pub mod project {
+        pub mod v1 {
+            tonic::include_proto!("zitadel.project.v1");
+        }
+    }
+    pub mod text {
+        pub mod v1 {
+            tonic::include_proto!("zitadel.text.v1");
+        }
+    }
+    pub mod user {
+        pub mod v1 {
+            tonic::include_proto!("zitadel.user.v1");
+        }
+    }
+}
