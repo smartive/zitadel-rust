@@ -1,4 +1,4 @@
-# ZITADEL Rust
+# ZITADEL for Rust &emsp; [![Crates.io](https://img.shields.io/crates/v/zitadel)](https://crates.io/crates/zitadel) [![docs.rs](https://img.shields.io/docsrs/zitadel)](https://docs.rs/zitadel/latest/zitadel/) ![Crates.io](https://img.shields.io/crates/dv/zitadel) ![Crates.io](https://img.shields.io/crates/l/zitadel)
 
 This repository contains the gRPC bindings for [ZITADEL](https://zitadel.ch)
 and other helpers to interact with the ZITADEL API.
@@ -6,7 +6,7 @@ and other helpers to interact with the ZITADEL API.
 With the help of the service account it is possible to access the ZITADEL API and use the management client to execute
 gRPC calls against the API.
 
-### Example
+## Example
 
 Fetch the first 1000 users in the organization of a service account:
 
