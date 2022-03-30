@@ -15,5 +15,21 @@
         "semanticCommitScope": "submodules"
       }
     ]
+  },
+  "rust": {
+    "packageRules": [
+      {
+        "matchPackagePrefixes": ["prost"],
+        "groupName": "prost packages"
+      },
+      {
+        "matchPackagePrefixes": ["serde"],
+        "groupName": "serde packages"
+      },
+      {
+        "matchPackagePrefixes": ["tonic"],
+        "groupName": "tonic packages"
+      }
+    ]
   }
 }
