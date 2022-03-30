@@ -1,11 +1,14 @@
 {
   "$schema": "https://docs.renovatebot.com/renovate-schema.json",
   "extends": ["github>buehler/renovate-config"],
+  "branchConcurrentLimit": 0,
+  "prHourlyLimit": 0,
+  "prConcurrentLimit": 0,
   "git-submodules": {
     "enabled": true,
     "packageRules": [
       {
-        "paths": ["external/**/*"],
+        "matchFiles": [".gitmodules"],
         "groupName": "external submodules",
         "groupSlug": "submodules",
         "semanticCommitType": "chore",
