@@ -19,16 +19,12 @@
   "rust": {
     "packageRules": [
       {
-        "matchPackagePrefixes": ["prost"],
-        "groupName": "prost packages"
+        "matchPackagePrefixes": ["prost", "tonic"],
+        "groupName": "grpc packages"
       },
       {
         "matchPackagePrefixes": ["serde"],
         "groupName": "serde packages"
-      },
-      {
-        "matchPackagePrefixes": ["tonic"],
-        "groupName": "tonic packages"
       }
     ]
   }
