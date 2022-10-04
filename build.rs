@@ -9,6 +9,7 @@ const CLIENT_PROTOS: &[&str; 3] = &[
     "zitadel/admin.proto",
     "zitadel/auth.proto",
     "zitadel/management.proto",
+    "zitadel/management.proto",
 ];
 
 const NON_CLIENT_PROTOS: &[&str; 19] = &[
@@ -34,6 +35,11 @@ const NON_CLIENT_PROTOS: &[&str; 19] = &[
 ];
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
+    println!("cargo:rerun-if-changed=external/zitadel/proto");
+    println!("cargo:rerun-if-changed=external/protoc-gen-validate");
+    println!("cargo:rerun-if-changed=external/googleapis");
+    println!("cargo:rerun-if-changed=external/grpc-gateway");
+
     tonic_build::configure()
         .build_server(false)
         .build_client(false)
