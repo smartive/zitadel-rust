@@ -20,21 +20,42 @@ include = [
     "external/grpc-gateway/protoc-gen-openapiv2/**/*.proto"
 ]
 
+[features]
+default = ["api"]
+api = ["dep:prost", "dep:prost-types", "dep:tonic", "dep:tonic-types"]
+interceptors = ["api"]
+credentials = [
+    "dep:jsonwebtoken",
+    "dep:openidconnect",
+    "dep:reqwest",
+    "dep:serde",
+    "dep:serde_json",
+    "dep:serde_urlencoded",
+    "dep:time"
+]
+auth-flows = ["credentials"]
+
 [dependencies]
-jsonwebtoken = "8.1.1"
-prost = "0.10"
-prost-types = "0.10"
-reqwest = { version = "0.11", features = ["json"] }
-serde = { version = "1.0", features = ["derive"] }
-serde_json = "1.0"
-serde_urlencoded = "0.7.1"
-time = "0.3.14"
-tonic = { version = "0.7", features = ["tls", "tls-roots", "tls-roots-common"] }
-tonic-types = "0.5"
+custom_error = "1.9.2"
+document-features = { version = "0.2", optional = true }
+jsonwebtoken = { version = "8.1.1", optional = true }
+openidconnect = { version = "2.3.2", optional = true }
+prost = { version = "0.11", optional = true }
+prost-types = { version = "0.11", optional = true }
+reqwest = { version = "0.11.12", features = ["json"], optional = true }
+serde = { version = "1.0", features = ["derive"], optional = true }
+serde_json = { version = "1.0", optional = true }
+serde_urlencoded = { version = "0.7.1", optional = true }
+time = { version = "0.3.15", optional = true }
+tonic = { version = "0.8", features = ["tls", "tls-roots", "tls-roots-common"], optional = true }
+tonic-types = { version = "0.6", optional = true }
 
 [dev-dependencies]
 tokio = { version = "1", features = ["macros", "rt-multi-thread"] }
 
 [build-dependencies]
 tokio = { version = "1", features = ["macros", "rt-multi-thread"] }
-tonic-build = "0.7"
+tonic-build = "0.8"
+
+[package.metadata.docs.rs]
+all-features = true
