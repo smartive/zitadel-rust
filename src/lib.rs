@@ -5,10 +5,11 @@
 )]
 
 mod api;
+
+#[cfg(feature = "credentials")]
 pub mod credentials;
 
 /*
-credentials (service account, application, basic auth?)
 auth flows
 grpc api w/ clients
 client interceptors

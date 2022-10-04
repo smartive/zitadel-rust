@@ -1,5 +1,3 @@
-use std::fs::read_to_string;
-
 use custom_error::custom_error;
 use jsonwebtoken::{encode, Algorithm, EncodingKey, Header};
 use openidconnect::{
@@ -13,6 +11,9 @@ use reqwest::{
     Method, Url,
 };
 use serde::{Deserialize, Serialize};
+use std::fs::read_to_string;
+
+use crate::credentials::jwt::JwtClaims;
 
 /// A service account for [ZITADEL](https://zitadel.ch/). The service
 /// account can be loaded from a valid JSON string or from a file containing the JSON string.
@@ -63,15 +64,6 @@ pub struct AuthenticationOptions {
     pub project_audiences: Vec<String>,
 }
 
-#[derive(Debug, Serialize)]
-struct JwtClaims {
-    iss: String,
-    sub: String,
-    iat: i64,
-    exp: i64,
-    aud: String,
-}
-
 custom_error! {
     /// Error type for service account related errors.
     pub ServiceAccountError
@@ -90,13 +82,13 @@ custom_error! {
 impl ServiceAccount {
     /// Load a [`ServiceAccount`] from a JSON file at a specific filepath.
     ///
-    /// # Errors
+    /// ### Errors
     ///
     /// This function may return an error when [`read_to_string`] returns an error.
     /// Further, an error may occur during the deserialization of
     /// [`load_from_json`][ServiceAccount::load_from_json].
     ///
-    /// # Example
+    /// ### Example
     ///
     /// ```no_run
     /// use zitadel::credentials::ServiceAccount;
@@ -111,12 +103,12 @@ impl ServiceAccount {
 
     /// Load a [`ServiceAccount`] from a JSON string.
     ///
-    /// # Errors
+    /// ### Errors
     ///
     /// This method may fail if the [deserialization][serde_json::from_str] does fail.
     /// Such an error can occur if the JSON is not formatted properly.
     ///
-    /// # Example
+    /// ### Example
     ///
     /// ```
     /// use zitadel::credentials::ServiceAccount;
@@ -138,7 +130,7 @@ impl ServiceAccount {
     /// to authenticate any request as the given service account. The access token
     /// is valid for 60 minutes.
     ///
-    /// # Errors
+    /// ### Errors
     ///
     /// This method may fail when:
     /// - The key in the service account is not a valid PEM encoded RSA private key.
@@ -147,7 +139,7 @@ impl ServiceAccount {
     /// - When the response status code is **not** 200 OK.
     /// - When the response cannot be parsed as valid JSON.
     ///
-    /// # Example
+    /// ### Example
     ///
     /// ```
     /// # #[tokio::main]
@@ -252,7 +244,7 @@ impl ServiceAccount {
                 source: Box::new(e),
             })?;
 
-        let jwt = self.signed_jwt(audience)?;
+        let jwt = self.create_signed_jwt(audience)?;
         let url = metadata
             .token_endpoint()
             .ok_or(ServiceAccountError::TokenEndpointMissing)?;
@@ -287,24 +279,12 @@ impl ServiceAccount {
             )
     }
 
-    fn claims(&self, audience: &str) -> JwtClaims {
-        let iat = time::OffsetDateTime::now_utc();
-        let exp = iat + time::Duration::hours(1);
-        JwtClaims {
-            iss: self.user_id.to_string(),
-            sub: self.user_id.to_string(),
-            iat: iat.unix_timestamp(),
-            exp: exp.unix_timestamp(),
-            aud: audience.to_string(),
-        }
-    }
-
-    fn signed_jwt(&self, audience: &str) -> Result<String, ServiceAccountError> {
+    fn create_signed_jwt(&self, audience: &str) -> Result<String, ServiceAccountError> {
         let key = EncodingKey::from_rsa_pem(self.key.as_bytes())
             .map_err(|e| ServiceAccountError::Key { source: e })?;
         let mut header = Header::new(Algorithm::RS256);
         header.kid = Some(self.key_id.to_string());
-        let claims = self.claims(audience);
+        let claims = JwtClaims::new(&self.user_id, audience);
         let jwt = encode(&header, &claims, &key)?;
 
         Ok(jwt)
@@ -353,6 +333,7 @@ mod tests {
 
     use super::*;
 
+    const ZITADEL_URL: &str = "https://zitadel-libraries-l8boqa.zitadel.cloud";
     const SERVICE_ACCOUNT: &str = r#"
     {
         "type": "serviceaccount",
@@ -403,38 +384,11 @@ mod tests {
         }
     }
 
-    // #[test]
-    // fn creates_correct_claims() {
-    //     let sa = ServiceAccount::load_from_json(SERVICE_ACCOUNT).unwrap();
-    //     let claims = sa.get_claims();
+    #[test]
+    fn creates_a_signed_jwt() {
+        let sa = ServiceAccount::load_from_json(SERVICE_ACCOUNT).unwrap();
+        let claims = sa.create_signed_jwt(ZITADEL_URL).unwrap();
 
-    //     assert_eq!(claims.aud, crate::ISSUER);
-    //     assert_eq!(claims.sub, sa.user_id);
-    //     assert_eq!(claims.iss, sa.user_id);
-    // }
-
-    // #[test]
-    // fn creates_a_signed_jwt() {
-    //     let sa = ServiceAccount::load_from_json(SERVICE_ACCOUNT).unwrap();
-    //     let claims = sa.signed_jwt().unwrap();
-
-    //     assert_eq!(&claims[0..5], "eyJ0e");
-    // }
-
-    // #[tokio::test]
-    // async fn fetch_a_token_auth() {
-    //     let sa = ServiceAccount::load_from_json(SERVICE_ACCOUNT).unwrap();
-    //     let token = sa.token_auth().await.unwrap();
-    //     assert_ne!(token.access_token, "".to_string());
-    //     // assert_ne!(token.expires_in, 0);
-    // }
-
-    // #[tokio::test]
-    // async fn authenticate_a_service_account() {
-    //     let sa = ServiceAccount::load_from_json(SERVICE_ACCOUNT).unwrap();
-    //     let token = sa.authenticate().await.unwrap();
-    //     assert_ne!(token, "".to_string());
-    // }
-
-    // TODO: test with mockito when server returns fail.
+        assert_eq!(&claims[0..5], "eyJ0e");
+    }
 }
