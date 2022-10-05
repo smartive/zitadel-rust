@@ -160,7 +160,7 @@ impl ServiceAccount {
     /// # }
     /// ```
     pub async fn authenticate(&self, audience: &str) -> Result<String, ServiceAccountError> {
-        self.authenticate_with_options(audience, Default::default())
+        self.authenticate_with_options(audience, &Default::default())
             .await
     }
 
@@ -198,7 +198,7 @@ impl ServiceAccount {
     /// # const ZITADEL_URL: &str = "https://zitadel-libraries-l8boqa.zitadel.cloud";
     /// use zitadel::credentials::{AuthenticationOptions, ServiceAccount};
     /// let service_account = ServiceAccount::load_from_json(SERVICE_ACCOUNT)?;
-    /// let access_token = service_account.authenticate_with_options(ZITADEL_URL, AuthenticationOptions {
+    /// let access_token = service_account.authenticate_with_options(ZITADEL_URL, &AuthenticationOptions {
     ///   api_access: true,
     ///   scopes: vec!["profile".to_string()],
     ///   ..Default::default()
@@ -223,7 +223,7 @@ impl ServiceAccount {
     /// # const ZITADEL_URL: &str = "https://zitadel-libraries-l8boqa.zitadel.cloud";
     /// use zitadel::credentials::{AuthenticationOptions, ServiceAccount};
     /// let service_account = ServiceAccount::load_from_json(SERVICE_ACCOUNT)?;
-    /// let access_token = service_account.authenticate_with_options(ZITADEL_URL, AuthenticationOptions {
+    /// let access_token = service_account.authenticate_with_options(ZITADEL_URL, &AuthenticationOptions {
     ///   scopes: vec!["profile".to_string(), "email".to_string()],
     ///   ..Default::default()
     /// }).await?;
@@ -234,7 +234,7 @@ impl ServiceAccount {
     pub async fn authenticate_with_options(
         &self,
         audience: &str,
-        options: AuthenticationOptions,
+        options: &AuthenticationOptions,
     ) -> Result<String, ServiceAccountError> {
         let issuer = IssuerUrl::new(audience.to_string())
             .map_err(|e| ServiceAccountError::AudienceUrl { source: e })?;
