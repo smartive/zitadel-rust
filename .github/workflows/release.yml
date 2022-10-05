@@ -36,16 +36,11 @@ jobs:
         with:
           toolchain: stable
 
-      - uses: actions-rs/cargo@v1
-        name: Login into crate.io
-        with:
-          command: login
-          args: ${{ secrets.CARGO_REGISTRY_TOKEN }}
-
       - name: Semantic Release
         uses: cycjimmy/semantic-release-action@v2
         with:
           extra_plugins: |
-            @semantic-release/exec
+            semantic-release-cargo
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          CARGO_REGISTRY_TOKEN: ${{ secrets.CARGO_REGISTRY_TOKEN }}
