@@ -1,31 +1,4 @@
 {
   "$schema": "https://docs.renovatebot.com/renovate-schema.json",
-  "extends": ["github>buehler/renovate-config"],
-  "branchConcurrentLimit": 0,
-  "prHourlyLimit": 0,
-  "prConcurrentLimit": 0,
-  "git-submodules": {
-    "enabled": true,
-    "packageRules": [
-      {
-        "matchFiles": [".gitmodules"],
-        "groupName": "external submodules",
-        "groupSlug": "submodules",
-        "semanticCommitType": "chore",
-        "semanticCommitScope": "submodules"
-      }
-    ]
-  },
-  "rust": {
-    "packageRules": [
-      {
-        "matchPackagePrefixes": ["prost", "tonic"],
-        "groupName": "grpc packages"
-      },
-      {
-        "matchPackagePrefixes": ["serde"],
-        "groupName": "serde packages"
-      }
-    ]
-  }
+  "extends": ["github>smartive/renovate-config", "github>smartive/renovate-config:with-submodules"]
 }
