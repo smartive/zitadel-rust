@@ -68,7 +68,7 @@ impl Application {
     ///
     /// ```
     /// use zitadel::credentials::Application;
-    /// let application = Application::load_from_json(r#"{"keyId": "1337", "clientId": "testing", "userId": "42", "key": "foobar"}"#)?;
+    /// let application = Application::load_from_json(r#"{"keyId": "1337", "clientId": "testing", "userId": "42", "key": "foobar", "appId": "myapp"}"#)?;
     /// println!("{:#?}", application);
     /// # Ok::<(), Box<dyn std::error::Error>>(())
     /// ```
@@ -139,20 +139,20 @@ mod tests {
     fn load_successfully_from_json() {
         let sa = Application::load_from_json(APPLICATION).unwrap();
 
-        assert_eq!(sa.user_id, "181828061098934529");
-        assert_eq!(sa.key_id, "181828078849229057");
+        assert_eq!(sa.client_id, "181963751145144577@zitadel_rust_test");
+        assert_eq!(sa.key_id, "181963758610940161");
     }
 
     #[test]
     fn load_successfully_from_file() {
-        let mut file = File::create("./temp").unwrap();
+        let mut file = File::create("./temp_app").unwrap();
         file.write_all(APPLICATION.as_bytes())
             .expect("Could not write temp.");
 
-        let sa = Application::load_from_file("./temp").unwrap();
+        let sa = Application::load_from_file("./temp_app").unwrap();
 
-        assert_eq!(sa.user_id, "181828061098934529");
-        assert_eq!(sa.key_id, "181828078849229057");
+        assert_eq!(sa.client_id, "181963751145144577@zitadel_rust_test");
+        assert_eq!(sa.key_id, "181963758610940161");
     }
 
     #[test]

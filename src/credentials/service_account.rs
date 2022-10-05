@@ -352,11 +352,11 @@ mod tests {
 
     #[test]
     fn load_successfully_from_file() {
-        let mut file = File::create("./temp").unwrap();
+        let mut file = File::create("./temp_sa").unwrap();
         file.write_all(SERVICE_ACCOUNT.as_bytes())
             .expect("Could not write temp.");
 
-        let sa = ServiceAccount::load_from_file("./temp").unwrap();
+        let sa = ServiceAccount::load_from_file("./temp_sa").unwrap();
 
         assert_eq!(sa.user_id, "181828061098934529");
         assert_eq!(sa.key_id, "181828078849229057");
