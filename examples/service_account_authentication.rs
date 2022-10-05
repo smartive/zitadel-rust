@@ -1,3 +1,5 @@
+use zitadel::credentials::ServiceAccount;
+
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     const SERVICE_ACCOUNT: &str = r#"
@@ -8,7 +10,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
          "userId": "181828061098934529"
      }"#;
     const ZITADEL_URL: &str = "https://zitadel-libraries-l8boqa.zitadel.cloud";
-    use zitadel::credentials::ServiceAccount;
     let service_account = ServiceAccount::load_from_json(SERVICE_ACCOUNT)?;
     let access_token = service_account.authenticate(ZITADEL_URL).await?;
     println!("access token: {}", access_token);
