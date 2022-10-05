@@ -1,8 +1,8 @@
 //! [gRPC](https://grpc.io/) module that contains the ZITADEL API compiled proto definitions.
-//! TODO.
 
 #![allow(clippy::all)]
 
+/// Generated gRPC code for the ZITADEL API.
 #[cfg(feature = "api")]
 pub mod zitadel {
     pub mod v1 {

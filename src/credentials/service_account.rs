@@ -38,7 +38,7 @@ pub struct ServiceAccount {
 
 /// Options for service account [authentication][ServiceAccount::authenticate].
 /// Allows customization of the provided OIDC scopes and discovery options.
-/// If [api_access] is set, the service account contains the special scope
+/// If [api_access][AuthenticationOptions::api_access] is set, the service account contains the special scope
 /// to access the ZITADEL API.
 #[derive(Clone, Debug, Default)]
 pub struct AuthenticationOptions {
@@ -123,8 +123,8 @@ impl ServiceAccount {
     }
 
     /// Authenticates the [`ServiceAccount`] against the provided audience (or issuer) to
-    /// fetch an access token. To authenticate with special options, use the [authenticate_with_options]
-    /// call.
+    /// fetch an access token. To authenticate with special options, use the
+    /// [authenticate_with_options][ServiceAccount::authenticate_with_options] call.
     ///
     /// The function returns an access token that can be sent
     /// to authenticate any request as the given service account. The access token
