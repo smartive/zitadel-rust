@@ -1,4 +1,5 @@
 {
+  "$schema": "https://json.schemastore.org/semantic-release.json",
   "branches": [
     "main",
     {
@@ -9,7 +10,12 @@
   "plugins": [
     "@semantic-release/commit-analyzer",
     "@semantic-release/release-notes-generator",
-    "semantic-release-cargo",
+    [
+      "semantic-release-cargo",
+      {
+        "checkArgs": ["--all-features"]
+      }
+    ],
     [
       "@semantic-release/github",
       {
