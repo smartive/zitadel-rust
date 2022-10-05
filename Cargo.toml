@@ -44,7 +44,6 @@ credentials = [
     "dep:serde_urlencoded",
     "dep:time"
 ]
-# auth-flows = ["credentials"]
 
 [dependencies]
 custom_error = "1.9.2"
