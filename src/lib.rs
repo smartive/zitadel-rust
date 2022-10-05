@@ -30,7 +30,10 @@
 //! [the ZITADEL repository](https://github.com/zitadel/zitadel).
 //!
 //! ## Feature flags
-#![doc = document_features::document_features!()]
+#![cfg_attr(
+    feature = "document-features",
+    cfg_attr(doc, doc = ::document_features::document_features!())
+)]
 
 #[cfg(feature = "api")]
 pub mod api;
