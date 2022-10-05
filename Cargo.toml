@@ -1,12 +1,12 @@
 [package]
 name = "zitadel"
-description = "An implementation of the ZITADEL gRPC API in Rust. Complemented with other useful elements such as ServiceAccount auth."
+description = "An implementation of ZITADEL API access and authentication in Rust."
 version = "0.0.0-development"
 edition = "2021"
 license = "MIT OR Apache-2.0"
-authors = ["Christoph Bühler <cbuehler@rootd.ch>"]
+authors = ["Christoph Bühler <christoph@smartive.ch>"]
 repository = "https://github.com/buehler/zitadel-rust"
-keywords = ["ZITADEL", "gRPC", "clients"]
+keywords = ["ZITADEL", "gRPC", "clients", "authentication", "oidc"]
 categories = ["authentication", "api-bindings"]
 include = [
     "build.rs",
@@ -20,21 +20,53 @@ include = [
     "external/grpc-gateway/protoc-gen-openapiv2/**/*.proto"
 ]
 
+[features]
+default = ["api"]
+
+## The API feature enables the gRPC service clients to access the ZITADEL API.
+api = ["dep:prost", "dep:prost-types", "dep:tonic", "dep:tonic-types"]
+
+## The interceptors feature enables specific gRPC interceptors and
+## new convenience functions to create a gRPC client with interceptors.
+## The interceptors provide easy access to an authenticated ZITADEL API client.
+## The interceptors work with the credentials from this crate.
+interceptors = ["api", "credentials", "dep:time", "dep:tokio"]
+
+## The credentials feature enables special credentials helpers for ZITADEL.
+## For example, it allows the user to create a ZITADEL service account and
+## authenticate against ZITADEL.
+credentials = [
+    "dep:jsonwebtoken",
+    "dep:openidconnect",
+    "dep:reqwest",
+    "dep:serde",
+    "dep:serde_json",
+    "dep:serde_urlencoded",
+    "dep:time"
+]
+
 [dependencies]
-jsonwebtoken = "8.1.1"
-prost = "0.10"
-prost-types = "0.10"
-reqwest = { version = "0.11", features = ["json"] }
-serde = { version = "1.0", features = ["derive"] }
-serde_json = "1.0"
-serde_urlencoded = "0.7.1"
-time = "0.3.15"
-tonic = { version = "0.7", features = ["tls", "tls-roots", "tls-roots-common"] }
-tonic-types = "0.5"
+custom_error = "1.9.2"
+document-features = { version = "0.2", optional = true }
+jsonwebtoken = { version = "8.1.1", optional = true }
+openidconnect = { version = "2.3.2", optional = true }
+prost = { version = "0.11", optional = true }
+prost-types = { version = "0.11", optional = true }
+reqwest = { version = "0.11.12", features = ["json"], optional = true }
+serde = { version = "1.0", features = ["derive"], optional = true }
+serde_json = { version = "1.0", optional = true }
+serde_urlencoded = { version = "0.7.1", optional = true }
+time = { version = "0.3.15", optional = true }
+tokio = { version = "1", optional = true, features = ["macros", "rt-multi-thread"] }
+tonic = { version = "0.8", features = ["tls", "tls-roots", "tls-roots-common"], optional = true }
+tonic-types = { version = "0.6", optional = true }
 
 [dev-dependencies]
 tokio = { version = "1", features = ["macros", "rt-multi-thread"] }
 
 [build-dependencies]
 tokio = { version = "1", features = ["macros", "rt-multi-thread"] }
-tonic-build = "0.7"
+tonic-build = "0.8"
+
+[package.metadata.docs.rs]
+all-features = true
