@@ -10,7 +10,7 @@ pub use api::zitadel;
 
 #[cfg(feature = "api")]
 mod api;
-#[cfg(feature = "api")]
+#[cfg(any(feature = "api", feature = "interceptors", feature = "credentials"))]
 pub mod clients;
 #[cfg(feature = "interceptors")]
 pub mod interceptors;

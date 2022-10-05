@@ -61,6 +61,29 @@ impl Interceptor for AccessTokenInterceptor {
     }
 }
 
+/// gRPC `Interceptor` that authenticates the service client calls
+/// with the given [`ServiceAccount`][crate::credentials::ServiceAccount].
+///
+/// When no access token is available, the interceptor will fetch a new
+/// token from the given audience (sometimes also called issuer) with
+/// the - optionally - provided [`AuthenticationOptions`]. If the options
+/// are set to `None`, the default options will be used.
+///
+/// When a token was fetched, the interceptor will only fetch a new token
+/// when the lifetime of the token has expired (default 60 minutes).
+///
+/// **Note on async**: The interceptor does work in sync and async contexts.
+/// However, in both cases, the interceptor spawns a new thread which then
+/// runs a tokio runtime. This is necessary because the interceptor trait
+/// only manages sync calls.
+///
+/// ### Example
+///
+/// The following example shows how to use the `ServiceAccountInterceptor`
+/// to fetch the user profile of a service account.
+///
+/// ```
+/// ```
 pub struct ServiceAccountInterceptor {
     audience: String,
     service_account: ServiceAccount,
@@ -70,6 +93,10 @@ pub struct ServiceAccountInterceptor {
 }
 
 impl ServiceAccountInterceptor {
+    /// Create a new [`ServiceAccountInterceptor`].
+    /// The interceptor uses the provided service account with
+    /// the given authentication options to fetch an access token
+    /// and attach it to the intercepted calls.
     pub fn new(
         audience: &str,
         service_account: &ServiceAccount,
@@ -261,5 +288,27 @@ mod tests {
             request.metadata().get("authorization").unwrap(),
             "Bearer existing"
         );
+    }
+
+    #[test]
+    fn service_account_interceptor_should_respect_token_lifetime_sync() {
+        let sa = ServiceAccount::load_from_json(SERVICE_ACCOUNT).unwrap();
+        let mut interceptor = ServiceAccountInterceptor::new(ZITADEL_URL, &sa, None);
+        interceptor.call(Request::new(())).unwrap();
+        let token = interceptor.token.clone().unwrap();
+        interceptor.call(Request::new(())).unwrap();
+
+        assert_eq!(token, interceptor.token.unwrap());
+    }
+
+    #[tokio::test]
+    async fn service_account_interceptor_should_respect_token_lifetime_async() {
+        let sa = ServiceAccount::load_from_json(SERVICE_ACCOUNT).unwrap();
+        let mut interceptor = ServiceAccountInterceptor::new(ZITADEL_URL, &sa, None);
+        interceptor.call(Request::new(())).unwrap();
+        let token = interceptor.token.clone().unwrap();
+        interceptor.call(Request::new(())).unwrap();
+
+        assert_eq!(token, interceptor.token.unwrap());
     }
 }
