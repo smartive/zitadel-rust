@@ -1,7 +1,7 @@
 #![doc(
     html_favicon_url = "https://raw.githubusercontent.com/caos/zitadel/main/console/src/favicon.ico",
     html_logo_url = "https://raw.githubusercontent.com/caos/zitadel/main/console/src/assets/images/zitadel-logo-solo-light.svg",
-    issue_tracker_base_url = "https://github.com/buehler/zitadel-rust/issues/"
+    issue_tracker_base_url = "https://github.com/smartive/zitadel-rust/issues/"
 )]
 //! This is the [ZITADEL](https://zitadel.com/) API and authentication crate for rust.
 //! It does provide the gRPC service clients to access the ZITADEL API and contains other
