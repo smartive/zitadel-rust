@@ -39,3 +39,5 @@
 pub mod api;
 #[cfg(feature = "credentials")]
 pub mod credentials;
+#[cfg(feature = "rocket")]
+pub mod rocket;

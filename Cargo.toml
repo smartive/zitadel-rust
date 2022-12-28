@@ -45,6 +45,14 @@ credentials = [
     "dep:time"
 ]
 
+## Feature that enables support for the [rocket framework](https://rocket.rs/).
+## It enables authentication features for rocket in the form of route guards.
+## The general configuration is done via managed application state.
+rocket = [
+    "credentials",
+    "dep:rocket"
+]
+
 [dependencies]
 custom_error = "1.9.2"
 document-features = { version = "0.2", optional = true }
@@ -53,6 +61,7 @@ openidconnect = { version = "2.4.0", optional = true }
 prost = { version = "0.11", optional = true }
 prost-types = { version = "0.11", optional = true }
 reqwest = { version = "0.11.13", features = ["json"], optional = true }
+rocket = { version = "0.5.0-rc.2", optional = true }
 serde = { version = "1.0", features = ["derive"], optional = true }
 serde_json = { version = "1.0", optional = true }
 serde_urlencoded = { version = "0.7.1", optional = true }
