@@ -54,7 +54,7 @@
 //! ```no_run
 //! # use zitadel::rocket::introspection::IntrospectedUser;
 //! #[rocket::get("/authed")]
-//! fn authed(user: IntrospectedUser) -> String {
+//! fn authed(user: &IntrospectedUser) -> String {
 //!     format!(
 //!         "Hello Authorized {:?} with id {}",
 //!         user.username, user.user_id
@@ -85,7 +85,7 @@
 //! }
 //!
 //! #[rocket::get("/authed")]
-//! fn authed(user: IntrospectedUser) -> String {
+//! fn authed(user: &IntrospectedUser) -> String {
 //!     format!(
 //!         "Hello Authorized {:?} with id {}",
 //!         user.username, user.user_id

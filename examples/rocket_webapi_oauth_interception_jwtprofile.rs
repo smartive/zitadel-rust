@@ -18,16 +18,16 @@ fn unauthed() -> &'static str {
 }
 
 #[rocket::get("/authed")]
-fn authed(user: IntrospectedUser) -> String {
+fn authed(user: &IntrospectedUser) -> String {
     format!(
         "Hello Authorized {:?} with id {}",
         user.username, user.user_id
     )
 }
 
-#[rocket::main]
-async fn main() -> Result<(), rocket::Error> {
-    let _ = rocket::build()
+#[rocket::launch]
+async fn rocket() -> _ {
+    rocket::build()
         .mount("/", rocket::routes![unauthed, authed])
         .manage(
             IntrospectionConfigBuilder::new("https://zitadel-libraries-l8boqa.zitadel.cloud")
@@ -36,8 +36,4 @@ async fn main() -> Result<(), rocket::Error> {
                 .await
                 .unwrap(),
         )
-        .launch()
-        .await?;
-
-    Ok(())
 }

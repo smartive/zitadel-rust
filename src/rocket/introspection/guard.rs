@@ -54,53 +54,65 @@ impl From<ZitadelIntrospectionResponse> for IntrospectedUser {
 }
 
 #[async_trait]
-impl<'request> FromRequest<'request> for IntrospectedUser {
-    type Error = IntrospectionGuardError;
+impl<'request> FromRequest<'request> for &'request IntrospectedUser {
+    type Error = &'request IntrospectionGuardError;
 
     async fn from_request(request: &'request Request<'_>) -> Outcome<Self, Self::Error> {
         let auth: Vec<_> = request.headers().get("authorization").collect();
         if auth.len() > 1 {
-            return Outcome::Failure((Status::BadRequest, IntrospectionGuardError::InvalidHeader));
+            return Outcome::Failure((Status::BadRequest, &IntrospectionGuardError::InvalidHeader));
         } else if auth.len() == 0 {
-            return Outcome::Failure((Status::Unauthorized, IntrospectionGuardError::Unauthorized));
+            return Outcome::Failure((
+                Status::Unauthorized,
+                &IntrospectionGuardError::Unauthorized,
+            ));
         }
 
         let token = auth[0];
         if !token.starts_with("Bearer ") {
-            return Outcome::Failure((Status::Unauthorized, IntrospectionGuardError::WrongScheme));
+            return Outcome::Failure((Status::Unauthorized, &IntrospectionGuardError::WrongScheme));
         }
 
-        let token = token.replace("Bearer ", "");
+        let result = request
+            .local_cache_async(async {
+                let token = token.replace("Bearer ", "");
 
-        let config = request.rocket().state::<IntrospectionConfig>();
-        if config.is_none() {
-            return Outcome::Failure((
-                Status::InternalServerError,
-                IntrospectionGuardError::MissingConfig,
-            ));
-        }
+                let config = request.rocket().state::<IntrospectionConfig>();
+                if config.is_none() {
+                    return Err((
+                        Status::InternalServerError,
+                        IntrospectionGuardError::MissingConfig,
+                    ));
+                }
 
-        let config = config.unwrap();
-        let result = introspect(
-            &config.introspection_uri,
-            &config.authority,
-            &config.authentication,
-            &token,
-        )
-        .await;
+                let config = config.unwrap();
+                let result = introspect(
+                    &config.introspection_uri,
+                    &config.authority,
+                    &config.authentication,
+                    &token,
+                )
+                .await;
 
-        if let Err(source) = result {
-            return Outcome::Failure((
-                Status::InternalServerError,
-                IntrospectionGuardError::Introspection { source },
-            ));
-        }
+                if let Err(source) = result {
+                    return Err((
+                        Status::InternalServerError,
+                        IntrospectionGuardError::Introspection { source },
+                    ));
+                }
 
-        let result = result.unwrap();
-        match result.active() {
-            true if result.sub().is_some() => Outcome::Success(result.into()),
-            false => Outcome::Failure((Status::Unauthorized, IntrospectionGuardError::Inactive)),
-            _ => Outcome::Failure((Status::Unauthorized, IntrospectionGuardError::NoUserId)),
+                let result = result.unwrap();
+                match result.active() {
+                    true if result.sub().is_some() => Ok(result.into()),
+                    false => Err((Status::Unauthorized, IntrospectionGuardError::Inactive)),
+                    _ => Err((Status::Unauthorized, IntrospectionGuardError::NoUserId)),
+                }
+            })
+            .await;
+
+        match result {
+            Ok(user) => Outcome::Success(user),
+            Err((status, error)) => Outcome::Failure((*status, error)),
         }
     }
 }

@@ -11,6 +11,7 @@ use serde::{Deserialize, Serialize};
 use crate::credentials::{Application, ApplicationError};
 
 custom_error! {
+    /// Error type for introspection related errors.
     pub IntrospectionError
         RequestFailed{source: openidconnect::reqwest::Error<reqwest::Error>} = "the introspection request did fail: {source}",
         PayloadSerialization = "could not correctly serialize introspection payload",
