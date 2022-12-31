@@ -1,0 +1,20 @@
+{
+  "id": "31a70203-3772-4e6a-8cf2-df399183a921",
+  "importStreams": [],
+  "authConfigs": [
+    {
+      "name": "ZITADEL",
+      "providerName": "oidc",
+      "id": "483e44fe-3c97-4e75-9ec8-0237764b6a3b",
+      "options": {
+        "redirectUri": "http://localhost/",
+        "clientId": "194289529828475137@zitadel_rust_test",
+        "scope": "openid profile email",
+        "issuer": "https://zitadel-libraries-l8boqa.zitadel.cloud",
+        "clientAuthMethod": "none",
+        "grantType": "authorizationCode"
+      }
+    }
+  ],
+  "certificates": []
+}

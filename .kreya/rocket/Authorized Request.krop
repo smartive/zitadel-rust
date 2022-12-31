@@ -1,0 +1,16 @@
+{
+  "details": {
+    "path": "/authed",
+    "method": "GET",
+    "headers": []
+  },
+  "requests": [
+    {
+      "contentType": "none"
+    }
+  ],
+  "authId": "483e44fe-3c97-4e75-9ec8-0237764b6a3b",
+  "operationType": "unary",
+  "invokerName": "rest",
+  "typeHint": "GET"
+}
