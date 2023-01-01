@@ -175,3 +175,78 @@ pub async fn introspect(
     serde_json::from_slice(response.body.as_slice())
         .map_err(|source| IntrospectionError::ParseResponse { source })
 }
+
+#[cfg(test)]
+mod tests {
+    #![allow(clippy::all)]
+
+    use crate::oidc::discovery::discover;
+    use openidconnect::TokenIntrospectionResponse;
+
+    use super::*;
+
+    const ZITADEL_URL: &str = "https://zitadel-libraries-l8boqa.zitadel.cloud";
+    const PERSONAL_ACCESS_TOKEN: &str =
+        "dEnGhIFs3VnqcQU5D2zRSeiarB1nwH6goIKY0J8MWZbsnWcTuu1C59lW9DgCq1y096GYdXA";
+
+    #[tokio::test]
+    async fn introspect_fails_with_invalid_url() {
+        let result = introspect(
+            "foobar",
+            "foobar",
+            &AuthorityAuthentication::Basic {
+                client_id: "".to_string(),
+                client_secret: "".to_string(),
+            },
+            "token",
+        )
+        .await;
+
+        assert!(result.is_err());
+        assert!(matches!(
+            result.unwrap_err(),
+            IntrospectionError::ParseUrl { .. }
+        ));
+    }
+
+    #[tokio::test]
+    async fn introspect_fails_with_invalid_endpoint() {
+        let meta = discover(ZITADEL_URL).await.unwrap();
+        let result = introspect(
+            &meta.token_endpoint().unwrap().to_string(),
+            ZITADEL_URL,
+            &AuthorityAuthentication::Basic {
+                client_id: "".to_string(),
+                client_secret: "".to_string(),
+            },
+            "token",
+        )
+        .await;
+
+        assert!(result.is_err());
+    }
+
+    #[tokio::test]
+    async fn introspect_succeeds() {
+        let meta = discover(ZITADEL_URL).await.unwrap();
+        let result = introspect(
+            &meta
+                .additional_metadata()
+                .introspection_endpoint
+                .as_ref()
+                .unwrap()
+                .to_string(),
+            ZITADEL_URL,
+            &AuthorityAuthentication::Basic {
+                client_id: "194339055499018497@zitadel_rust_test".to_string(),
+                client_secret: "Ip56oGzxKL1rJ8JaleUVKL7qUlpZ1tqHQYRSd6JE1mTlTJ3pDkDzoObHdZsOg88B"
+                    .to_string(),
+            },
+            PERSONAL_ACCESS_TOKEN,
+        )
+        .await
+        .unwrap();
+
+        assert!(result.active());
+    }
+}
