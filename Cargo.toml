@@ -21,16 +21,10 @@ include = [
 ]
 
 [features]
-default = ["api"]
+default = []
 
 ## The API feature enables the gRPC service clients to access the ZITADEL API.
 api = ["dep:prost", "dep:prost-types", "dep:tonic", "dep:tonic-types"]
-
-## The interceptors feature enables specific gRPC interceptors and
-## new convenience functions to create a gRPC client with interceptors.
-## The interceptors provide easy access to an authenticated ZITADEL API client.
-## The interceptors work with the credentials from this crate.
-interceptors = ["api", "credentials", "dep:time", "dep:tokio"]
 
 ## The credentials feature enables special credentials helpers for ZITADEL.
 ## For example, it allows the user to create a ZITADEL service account and
@@ -42,10 +36,34 @@ credentials = [
     "dep:serde",
     "dep:serde_json",
     "dep:serde_urlencoded",
-    "dep:time"
+    "dep:time",
+]
+
+## The interceptors feature enables specific gRPC interceptors and
+## new convenience functions to create a gRPC client with interceptors.
+## The interceptors provide easy access to an authenticated ZITADEL API client.
+## The interceptors work with the credentials from this crate.
+interceptors = ["api", "credentials", "dep:time", "dep:tokio"]
+
+## The OIDC module enables basic OIDC (OpenID Connect) features to communicate
+## with ZITADEL. Two examples are the `discover` and `introspect` functions.
+## The OIDC features are required for some of the web framework features.
+oidc = [
+    "credentials",
+    "dep:base64",
+]
+
+## Feature that enables support for the [rocket framework](https://rocket.rs/).
+## It enables authentication features for rocket in the form of route guards.
+## Refer to the rocket module for more information.
+rocket = [
+    "credentials",
+    "oidc",
+    "dep:rocket",
 ]
 
 [dependencies]
+base64 = { version = "0.20.0", optional = true }
 custom_error = "1.9.2"
 document-features = { version = "0.2", optional = true }
 jsonwebtoken = { version = "8.2.0", optional = true }
@@ -53,6 +71,7 @@ openidconnect = { version = "2.4.0", optional = true }
 prost = { version = "0.11", optional = true }
 prost-types = { version = "0.11", optional = true }
 reqwest = { version = "0.11.13", features = ["json"], optional = true }
+rocket = { version = "0.5.0-rc.2", optional = true }
 serde = { version = "1.0", features = ["derive"], optional = true }
 serde_json = { version = "1.0", optional = true }
 serde_urlencoded = { version = "0.7.1", optional = true }
