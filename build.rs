@@ -37,19 +37,22 @@ const NON_CLIENT_PROTOS: &[&str; 21] = &[
 ];
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
-    println!("cargo:rerun-if-changed=external/zitadel/proto");
-    println!("cargo:rerun-if-changed=external/protoc-gen-validate");
-    println!("cargo:rerun-if-changed=external/googleapis");
-    println!("cargo:rerun-if-changed=external/grpc-gateway");
+    #[cfg(feature = "api")]
+    {
+        println!("cargo:rerun-if-changed=external/zitadel/proto");
+        println!("cargo:rerun-if-changed=external/protoc-gen-validate");
+        println!("cargo:rerun-if-changed=external/googleapis");
+        println!("cargo:rerun-if-changed=external/grpc-gateway");
 
-    tonic_build::configure()
-        .build_server(false)
-        .build_client(false)
-        .compile(NON_CLIENT_PROTOS, INCLUDES)?;
-    tonic_build::configure()
-        .build_server(false)
-        .build_client(true)
-        .compile(CLIENT_PROTOS, INCLUDES)?;
+        tonic_build::configure()
+            .build_server(false)
+            .build_client(false)
+            .compile(NON_CLIENT_PROTOS, INCLUDES)?;
+        tonic_build::configure()
+            .build_server(false)
+            .build_client(true)
+            .compile(CLIENT_PROTOS, INCLUDES)?;
+    }
 
     Ok(())
 }
