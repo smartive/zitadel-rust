@@ -45,10 +45,12 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         println!("cargo:rerun-if-changed=external/grpc-gateway");
 
         tonic_build::configure()
+            .emit_rerun_if_changed(false)
             .build_server(false)
             .build_client(false)
             .compile(NON_CLIENT_PROTOS, INCLUDES)?;
         tonic_build::configure()
+            .emit_rerun_if_changed(false)
             .build_server(false)
             .build_client(true)
             .compile(CLIENT_PROTOS, INCLUDES)?;
