@@ -261,8 +261,10 @@ impl ServiceAccount {
         ])
         .map_err(|_| ServiceAccountError::UrlEncodeError)?;
 
+        let url =
+            Url::parse(url.as_str()).map_err(|_| ServiceAccountError::TokenEndpointMissing)?;
         let response = async_http_client(HttpRequest {
-            url: Url::parse(url.as_str()).map_err(|_| ServiceAccountError::TokenEndpointMissing)?,
+            url,
             method: Method::POST,
             headers,
             body: body.into_bytes(),
