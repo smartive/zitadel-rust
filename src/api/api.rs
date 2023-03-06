@@ -42,6 +42,11 @@ pub mod zitadel {
             tonic::include_proto!("zitadel.change.v1");
         }
     }
+    pub mod event {
+        pub mod v1 {
+            tonic::include_proto!("zitadel.event.v1");
+        }
+    }
     pub mod idp {
         pub mod v1 {
             tonic::include_proto!("zitadel.idp.v1");

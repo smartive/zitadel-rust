@@ -12,7 +12,7 @@ const CLIENT_PROTOS: &[&str; 4] = &[
     "zitadel/system.proto",
 ];
 
-const NON_CLIENT_PROTOS: &[&str; 21] = &[
+const NON_CLIENT_PROTOS: &[&str; 22] = &[
     "protoc-gen-openapiv2/options/annotations.proto",
     "protoc-gen-openapiv2/options/openapiv2.proto",
     "validate/validate.proto",
@@ -20,6 +20,7 @@ const NON_CLIENT_PROTOS: &[&str; 21] = &[
     "zitadel/app.proto",
     "zitadel/auth_n_key.proto",
     "zitadel/change.proto",
+    "zitadel/event.proto",
     "zitadel/idp.proto",
     "zitadel/instance.proto",
     "zitadel/member.proto",
