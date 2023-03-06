@@ -87,6 +87,11 @@ pub mod zitadel {
             tonic::include_proto!("zitadel.project.v1");
         }
     }
+    pub mod quota {
+        pub mod v1 {
+            tonic::include_proto!("zitadel.quota.v1");
+        }
+    }
     pub mod settings {
         pub mod v1 {
             tonic::include_proto!("zitadel.settings.v1");
