@@ -77,15 +77,15 @@ serde_json = { version = "1.0", optional = true }
 serde_urlencoded = { version = "0.7.1", optional = true }
 time = { version = "0.3.20", optional = true }
 tokio = { version = "1", optional = true, features = ["macros", "rt-multi-thread"] }
-tonic = { version = "0.8", features = ["tls", "tls-roots", "tls-roots-common"], optional = true }
-tonic-types = { version = "0.6", optional = true }
+tonic = { version = "0.9", features = ["tls", "tls-roots", "tls-roots-common"], optional = true }
+tonic-types = { version = "0.9", optional = true }
 
 [dev-dependencies]
 tokio = { version = "1", features = ["macros", "rt-multi-thread"] }
 
 [build-dependencies]
 tokio = { version = "1", features = ["macros", "rt-multi-thread"] }
-tonic-build = "0.8"
+tonic-build = "0.9"
 
 [package.metadata.docs.rs]
 all-features = true
