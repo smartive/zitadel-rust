@@ -5,8 +5,10 @@ use openidconnect::url::{ParseError, Url};
 use openidconnect::{
     core::CoreTokenType, ExtraTokenFields, HttpRequest, StandardTokenIntrospectionResponse,
 };
+
 use reqwest::header::{HeaderMap, ACCEPT, AUTHORIZATION, CONTENT_TYPE};
 use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
 
 use crate::credentials::{Application, ApplicationError};
 
@@ -18,13 +20,18 @@ custom_error! {
         JWTProfile{source: ApplicationError} = "could not create signed jwt key: {source}",
         ParseUrl{source: ParseError} = "could not parse url: {source}",
         ParseResponse{source: serde_json::Error} = "could not parse introspection response: {source}",
+        DecodeResponse{source: base64::DecodeError} = "could not decode base64 metadata: {source}",
 }
 
 /// Introspection response information that is returned by the ZITADEL
 /// introspection endpoint. Introspection returns the
 /// [specified information](https://zitadel.com/docs/apis/openidoauth/endpoints#introspect-response)
 /// by default and [additional claims](https://zitadel.com/docs/apis/openidoauth/claims)
-/// if requested by scope.
+/// if requested by scope:
+/// - When scope contains `urn:zitadel:iam:user:resourceowner`, the fields prefixed with
+///  `resource_owner_` are set.
+/// - When scope contains `urn:zitadel:iam:user:metadata`, the metadata hashmap will be
+///   filled with the user metadata.
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct ZitadelIntrospectionExtraTokenFields {
     pub name: Option<String>,
@@ -34,6 +41,14 @@ pub struct ZitadelIntrospectionExtraTokenFields {
     pub email: Option<String>,
     pub email_verified: Option<bool>,
     pub locale: Option<String>,
+    #[serde(rename = "urn:zitadel:iam:user:resourceowner:id")]
+    pub resource_owner_id: Option<String>,
+    #[serde(rename = "urn:zitadel:iam:user:resourceowner:name")]
+    pub resource_owner_name: Option<String>,
+    #[serde(rename = "urn:zitadel:iam:user:resourceowner:primary_domain")]
+    pub resource_owner_primary_domain: Option<String>,
+    #[serde(rename = "urn:zitadel:iam:user:metadata")]
+    pub metadata: Option<HashMap<String, String>>,
 }
 
 impl ExtraTokenFields for ZitadelIntrospectionExtraTokenFields {}
@@ -172,8 +187,28 @@ pub async fn introspect(
     .await
     .map_err(|source| IntrospectionError::RequestFailed { source })?;
 
-    serde_json::from_slice(response.body.as_slice())
-        .map_err(|source| IntrospectionError::ParseResponse { source })
+    let mut response: ZitadelIntrospectionResponse =
+        serde_json::from_slice(response.body.as_slice())
+            .map_err(|source| IntrospectionError::ParseResponse { source })?;
+    decode_metadata(&mut response)?;
+    Ok(response)
+}
+
+// Metadata values are base64 encoded.
+fn decode_metadata(response: &mut ZitadelIntrospectionResponse) -> Result<(), IntrospectionError> {
+    if let Some(h) = &response.extra_fields().metadata {
+        let mut extra = response.extra_fields().clone();
+        let mut metadata = HashMap::new();
+        for (k, v) in h {
+            let decoded_v = base64::decode(v)
+                .map_err(|source| IntrospectionError::DecodeResponse { source })?;
+            let decoded_v = String::from_utf8_lossy(&decoded_v).into_owned();
+            metadata.insert(k.clone(), decoded_v);
+        }
+        extra.metadata.replace(metadata);
+        response.set_extra_fields(extra)
+    }
+    Ok(())
 }
 
 #[cfg(test)]
