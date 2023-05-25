@@ -2,7 +2,6 @@ use std::net::SocketAddr;
 
 use axum::response::IntoResponse;
 use axum::routing::get;
-use axum::RequestExt;
 use axum::Router;
 use zitadel::axum::introspection::{IntrospectedUser, IntrospectionStateBuilder};
 

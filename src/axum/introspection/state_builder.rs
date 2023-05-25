@@ -20,6 +20,7 @@ pub struct IntrospectionStateBuilder {
     authentication: Option<AuthorityAuthentication>,
 }
 
+/// Builder for [IntrospectionConfig]
 impl IntrospectionStateBuilder {
     pub fn new(authority: &str) -> Self {
         Self {
