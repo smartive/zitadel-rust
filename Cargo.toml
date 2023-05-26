@@ -9,15 +9,15 @@ repository = "https://github.com/buehler/zitadel-rust"
 keywords = ["ZITADEL", "gRPC", "clients", "authentication", "oidc"]
 categories = ["authentication", "api-bindings"]
 include = [
-    "build.rs",
-    "src/**/*.rs",
-    "Cargo.toml",
-    "LICENSE*",
-    "README.md",
-    "external/zitadel/proto/**/*.proto",
-    "external/protoc-gen-validate/validate/**/*.proto",
-    "external/googleapis/google/**/*.proto",
-    "external/grpc-gateway/protoc-gen-openapiv2/**/*.proto"
+  "build.rs",
+  "src/**/*.rs",
+  "Cargo.toml",
+  "LICENSE*",
+  "README.md",
+  "external/zitadel/proto/**/*.proto",
+  "external/protoc-gen-validate/validate/**/*.proto",
+  "external/googleapis/google/**/*.proto",
+  "external/grpc-gateway/protoc-gen-openapiv2/**/*.proto",
 ]
 
 [features]
@@ -30,13 +30,13 @@ api = ["dep:prost", "dep:prost-types", "dep:tonic", "dep:tonic-types"]
 ## For example, it allows the user to create a ZITADEL service account and
 ## authenticate against ZITADEL.
 credentials = [
-    "dep:jsonwebtoken",
-    "dep:openidconnect",
-    "dep:reqwest",
-    "dep:serde",
-    "dep:serde_json",
-    "dep:serde_urlencoded",
-    "dep:time",
+  "dep:jsonwebtoken",
+  "dep:openidconnect",
+  "dep:reqwest",
+  "dep:serde",
+  "dep:serde_json",
+  "dep:serde_urlencoded",
+  "dep:time",
 ]
 
 ## The interceptors feature enables specific gRPC interceptors and
@@ -48,21 +48,18 @@ interceptors = ["api", "credentials", "dep:time", "dep:tokio"]
 ## The OIDC module enables basic OIDC (OpenID Connect) features to communicate
 ## with ZITADEL. Two examples are the `discover` and `introspect` functions.
 ## The OIDC features are required for some of the web framework features.
-oidc = [
-    "credentials",
-    "dep:base64",
-]
+oidc = ["credentials", "dep:base64"]
 
 ## Feature that enables support for the [rocket framework](https://rocket.rs/).
 ## It enables authentication features for rocket in the form of route guards.
 ## Refer to the rocket module for more information.
-rocket = [
-    "credentials",
-    "oidc",
-    "dep:rocket",
-]
+rocket = ["credentials", "oidc", "dep:rocket"]
+
+axum = ["credentials", "oidc", "dep:axum", "dep:axum-extra"]
 
 [dependencies]
+axum = { version = "0.6.18", optional = true, features = ["headers", "macros"] }
+axum-extra = { version = "0.7.4", optional = true }
 base64 = { version = "0.21.2", optional = true }
 custom_error = "1.9.2"
 document-features = { version = "0.2", optional = true }
@@ -76,12 +73,20 @@ serde = { version = "1.0", features = ["derive"], optional = true }
 serde_json = { version = "1.0", optional = true }
 serde_urlencoded = { version = "0.7.1", optional = true }
 time = { version = "0.3.21", optional = true }
-tokio = { version = "1", optional = true, features = ["macros", "rt-multi-thread"] }
-tonic = { version = "0.9", features = ["tls", "tls-roots", "tls-roots-common"], optional = true }
+tokio = { version = "1", optional = true, features = [
+  "macros",
+  "rt-multi-thread",
+] }
+tonic = { version = "0.9", features = [
+  "tls",
+  "tls-roots",
+  "tls-roots-common",
+], optional = true }
 tonic-types = { version = "0.9", optional = true }
 
 [dev-dependencies]
 tokio = { version = "1", features = ["macros", "rt-multi-thread"] }
+tower = { version = "0.4.13" }
 
 [build-dependencies]
 tokio = { version = "1", features = ["macros", "rt-multi-thread"] }
