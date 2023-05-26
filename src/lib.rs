@@ -37,6 +37,8 @@
 
 #[cfg(feature = "api")]
 pub mod api;
+#[cfg(feature = "axum")]
+pub mod axum;
 #[cfg(feature = "credentials")]
 pub mod credentials;
 #[cfg(feature = "oidc")]
