@@ -58,9 +58,9 @@ rocket = ["credentials", "oidc", "dep:rocket"]
 axum = ["credentials", "oidc", "dep:axum", "dep:axum-extra"]
 
 [dependencies]
-base64 = { version = "0.21.1", optional = true }
 axum = { version = "0.6.18", optional = true, features = ["headers", "macros"] }
 axum-extra = { version = "0.7.4", optional = true }
+base64 = { version = "0.21.2", optional = true }
 custom_error = "1.9.2"
 document-features = { version = "0.2", optional = true }
 jsonwebtoken = { version = "8.3.0", optional = true }
