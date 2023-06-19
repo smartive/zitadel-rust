@@ -254,7 +254,7 @@ impl ServiceAccount {
             CONTENT_TYPE,
             "application/x-www-form-urlencoded".parse().unwrap(),
         );
-        let body = serde_urlencoded::to_string(&[
+        let body = serde_urlencoded::to_string([
             ("grant_type", "urn:ietf:params:oauth:grant-type:jwt-bearer"),
             ("assertion", &jwt),
             ("scope", &options.create_scopes()),

@@ -36,7 +36,7 @@ impl IntoResponse for IntrospectionGuardError {
             IntrospectionGuardError::Unauthorized => (StatusCode::UNAUTHORIZED, "unauthorized"),
             IntrospectionGuardError::InvalidHeader => (StatusCode::BAD_REQUEST, "invalid header"),
             IntrospectionGuardError::WrongScheme => (StatusCode::BAD_REQUEST, "invalid schema"),
-            IntrospectionGuardError::Introspection { source } => {
+            IntrospectionGuardError::Introspection { source: _ } => {
                 (StatusCode::BAD_REQUEST, "introspection error")
             }
             IntrospectionGuardError::Inactive => (StatusCode::FORBIDDEN, "user is inactive"),
@@ -87,7 +87,7 @@ where
             &config.introspection_uri,
             &config.authority,
             &config.authentication,
-            &bearer.token(),
+            bearer.token(),
         )
         .await;
 

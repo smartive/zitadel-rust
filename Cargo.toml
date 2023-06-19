@@ -9,35 +9,22 @@ repository = "https://github.com/buehler/zitadel-rust"
 keywords = ["ZITADEL", "gRPC", "clients", "authentication", "oidc"]
 categories = ["authentication", "api-bindings"]
 include = [
-  "build.rs",
   "src/**/*.rs",
   "Cargo.toml",
   "LICENSE*",
   "README.md",
-  "external/zitadel/proto/**/*.proto",
-  "external/protoc-gen-validate/validate/**/*.proto",
-  "external/googleapis/google/**/*.proto",
-  "external/grpc-gateway/protoc-gen-openapiv2/**/*.proto",
 ]
 
 [features]
 default = []
 
 ## The API feature enables the gRPC service clients to access the ZITADEL API.
-api = ["dep:prost", "dep:prost-types", "dep:tonic", "dep:tonic-types"]
+api = ["dep:prost", "dep:prost-types", "dep:tonic", "dep:tonic-types", "dep:pbjson-types"]
 
 ## The credentials feature enables special credentials helpers for ZITADEL.
 ## For example, it allows the user to create a ZITADEL service account and
 ## authenticate against ZITADEL.
-credentials = [
-  "dep:jsonwebtoken",
-  "dep:openidconnect",
-  "dep:reqwest",
-  "dep:serde",
-  "dep:serde_json",
-  "dep:serde_urlencoded",
-  "dep:time",
-]
+credentials = ["dep:jsonwebtoken", "dep:openidconnect", "dep:reqwest", "dep:serde", "dep:serde_json", "dep:serde_urlencoded", "dep:time"]
 
 ## The interceptors feature enables specific gRPC interceptors and
 ## new convenience functions to create a gRPC client with interceptors.
@@ -48,10 +35,7 @@ interceptors = ["api", "credentials", "dep:time", "dep:tokio"]
 ## The OIDC module enables basic OIDC (OpenID Connect) features to communicate
 ## with ZITADEL. Two examples are the `discover` and `introspect` functions.
 ## The OIDC features are required for some of the web framework features.
-oidc = [
-    "credentials",
-    "dep:base64-compat",
-]
+oidc = ["credentials", "dep:base64-compat"]
 
 ## Feature that enables support for the [rocket framework](https://rocket.rs/).
 ## It enables authentication features for rocket in the form of route guards.
@@ -68,6 +52,7 @@ custom_error = "1.9.2"
 document-features = { version = "0.2", optional = true }
 jsonwebtoken = { version = "8.3.0", optional = true }
 openidconnect = { version = "3.2.0", optional = true }
+pbjson-types = { version = "0.5.1", optional = true }
 prost = { version = "0.11", optional = true }
 prost-types = { version = "0.11", optional = true }
 reqwest = { version = "0.11.18", features = ["json", "rustls-tls"], default-features = false, optional = true }
