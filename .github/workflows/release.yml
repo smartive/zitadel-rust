@@ -6,39 +6,24 @@ on:
       - main
 
 jobs:
-  lint_and_test:
-    name: Testing
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v3
-        with:
-          submodules: true
-      - uses: arduino/setup-protoc@v1
-        with:
-          repo-token: ${{ secrets.GITHUB_TOKEN }}
-      - uses: actions-rs/toolchain@v1
-        with:
-          toolchain: stable
-      - uses: actions-rs/cargo@v1
-        with:
-          command: test
-          args: --all-features
-
   package_and_publish:
     name: Package and Publish
-    needs:
-      - lint_and_test
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
+      - uses: actions-rust-lang/setup-rust-toolchain@v1
+      - uses: bufbuild/buf-setup-action@v1
         with:
-          submodules: true
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+      - uses: extractions/setup-just@v1
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
       - uses: arduino/setup-protoc@v1
         with:
           repo-token: ${{ secrets.GITHUB_TOKEN }}
-      - uses: actions-rs/toolchain@v1
-        with:
-          toolchain: stable
+      - run: cargo install protoc-gen-prost protoc-gen-prost-crate protoc-gen-tonic
+      - name: generated grpc code
+        run: just
       - name: Semantic Release
         uses: cycjimmy/semantic-release-action@v3
         with:

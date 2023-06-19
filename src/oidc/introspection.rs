@@ -113,14 +113,14 @@ fn payload(
     token: &str,
 ) -> Result<String, IntrospectionError> {
     match auth {
-        AuthorityAuthentication::Basic { .. } => serde_urlencoded::to_string(&[("token", token)])
+        AuthorityAuthentication::Basic { .. } => serde_urlencoded::to_string([("token", token)])
             .map_err(|_| IntrospectionError::PayloadSerialization),
         AuthorityAuthentication::JWTProfile { application } => {
             let jwt = application
                 .create_signed_jwt(authority)
                 .map_err(|source| IntrospectionError::JWTProfile { source })?;
 
-            serde_urlencoded::to_string(&[
+            serde_urlencoded::to_string([
                 (
                     "client_assertion_type",
                     "urn:ietf:params:oauth:client-assertion-type:jwt-bearer",

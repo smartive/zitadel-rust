@@ -1,3 +1,4 @@
 /target
 Cargo.lock
 temp*
+src/api/generated
