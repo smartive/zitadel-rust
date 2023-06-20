@@ -1,5 +1,6 @@
 use zitadel::{
     credentials::Application,
+    oidc::introspection::cache::in_memory::InMemoryIntrospectionCache,
     rocket::introspection::{IntrospectedUser, IntrospectionConfigBuilder},
 };
 
@@ -32,6 +33,7 @@ async fn rocket() -> _ {
         .manage(
             IntrospectionConfigBuilder::new("https://zitadel-libraries-l8boqa.zitadel.cloud")
                 .with_jwt_profile(Application::load_from_json(APPLICATION).unwrap())
+                .with_introspection_cache(Box::new(InMemoryIntrospectionCache::new()))
                 .build()
                 .await
                 .unwrap(),

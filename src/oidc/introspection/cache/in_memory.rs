@@ -1,20 +1,18 @@
-use std::{
-    collections::HashMap,
-    sync::{Arc, Mutex},
-};
+use std::{collections::HashMap, sync::Mutex};
 
 use openidconnect::TokenIntrospectionResponse;
 
 type Response = super::super::ZitadelIntrospectionResponse;
 
+#[derive(Debug)]
 pub struct InMemoryIntrospectionCache {
-    cache: Arc<Mutex<HashMap<String, (Response, i64)>>>,
+    cache: Mutex<HashMap<String, (Response, i64)>>,
 }
 
 impl InMemoryIntrospectionCache {
     pub fn new() -> Self {
         Self {
-            cache: Arc::new(Mutex::new(HashMap::new())),
+            cache: Mutex::new(HashMap::new()),
         }
     }
 }

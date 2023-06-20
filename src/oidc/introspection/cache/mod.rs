@@ -4,7 +4,8 @@
 //! or only be kept in memory.
 
 pub mod in_memory;
-// mod pgsql;
+
+type Response = super::ZitadelIntrospectionResponse;
 
 /// Trait that needs to be implemented by a cache.
 /// Enables caching the introspection results done by
@@ -12,8 +13,8 @@ pub mod in_memory;
 ///
 /// The cache MUST respect the `expires_in` field of the introspection result.
 #[async_trait::async_trait]
-pub trait IntrospectionCache: Send + Sync {
-    async fn get(&self, token: &str) -> Option<super::ZitadelIntrospectionResponse>;
+pub trait IntrospectionCache: Send + Sync + std::fmt::Debug {
+    async fn get(&self, token: &str) -> Option<Response>;
 
-    async fn set(&self, token: &str, response: super::ZitadelIntrospectionResponse);
+    async fn set(&self, token: &str, response: Response);
 }

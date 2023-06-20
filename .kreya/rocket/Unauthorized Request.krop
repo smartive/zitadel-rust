@@ -2,7 +2,8 @@
   "details": {
     "path": "/unauthed",
     "method": "GET",
-    "headers": []
+    "headers": [],
+    "pathParams": []
   },
   "requests": [
     {

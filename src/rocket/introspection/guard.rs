@@ -1,5 +1,6 @@
 use custom_error::custom_error;
 use openidconnect::TokenIntrospectionResponse;
+use rocket::data::N;
 use rocket::http::Status;
 use rocket::request::{FromRequest, Outcome};
 use rocket::{async_trait, Request};
@@ -86,6 +87,34 @@ impl<'request> FromRequest<'request> for &'request IntrospectedUser {
                 }
 
                 let config = config.unwrap();
+
+                #[cfg(feature = "introspection_cache")]
+                let result = async {
+                    if let Some(cache) = &config.cache {
+                        if let Some(response) = cache.get(&token).await {
+                            return Ok(response);
+                        }
+                    }
+
+                    let response = introspect(
+                        &config.introspection_uri,
+                        &config.authority,
+                        &config.authentication,
+                        &token,
+                    )
+                    .await;
+
+                    if let Some(cache) = &config.cache {
+                        if let Ok(response) = &response {
+                            cache.set(&token, response.clone()).await;
+                        }
+                    }
+
+                    response
+                }
+                .await;
+
+                #[cfg(not(feature = "introspection_cache"))]
                 let result = introspect(
                     &config.introspection_uri,
                     &config.authority,

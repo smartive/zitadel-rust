@@ -64,6 +64,17 @@ impl IntrospectionConfigBuilder {
         self
     }
 
+    /// Set the [IntrospectionCache] to use for caching introspection responses.
+    #[cfg(feature = "introspection_cache")]
+    pub fn with_introspection_cache(
+        &mut self,
+        cache: Box<dyn IntrospectionCache>,
+    ) -> &mut IntrospectionConfigBuilder {
+        self.cache = Some(cache);
+
+        self
+    }
+
     /// Build the [IntrospectionConfig]. This asynchronous method fetches the discovery document
     /// of the ZITADEL instance and gets the introspection endpoint.
     ///
@@ -142,6 +153,8 @@ impl IntrospectionConfigBuilder {
             authority: self.authority.clone(),
             introspection_uri: introspection_uri.unwrap(),
             authentication: self.authentication.as_ref().unwrap().clone(),
+            #[cfg(feature = "introspection_cache")]
+            cache: self.cache.take(),
         })
     }
 }
