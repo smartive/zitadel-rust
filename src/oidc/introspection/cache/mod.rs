@@ -12,9 +12,16 @@ type Response = super::ZitadelIntrospectionResponse;
 /// [introspect](crate::oidc::introspection::introspect).
 ///
 /// The cache MUST respect the `expires_in` field of the introspection result.
+/// If, by any means, the `exp` field is not set, the cache MUST NOT cache the result.
+///
+/// ZITADEL will always set the `exp` field, if the token is "active".
+///
+/// Non-active tokens SHOULD not be cached.
 #[async_trait::async_trait]
 pub trait IntrospectionCache: Send + Sync + std::fmt::Debug {
     async fn get(&self, token: &str) -> Option<Response>;
 
     async fn set(&self, token: &str, response: Response);
+
+    async fn clear(&self);
 }

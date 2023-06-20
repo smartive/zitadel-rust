@@ -35,9 +35,18 @@ impl super::IntrospectionCache for InMemoryIntrospectionCache {
     }
 
     async fn set(&self, token: &str, response: Response) {
+        if !response.active() || response.exp().is_none() {
+            return;
+        }
+
         let mut cache = self.cache.lock().unwrap();
         let expires_at = response.exp().unwrap().timestamp();
         cache.insert(token.to_string(), (response, expires_at));
+    }
+
+    async fn clear(&self) {
+        let mut cache = self.cache.lock().unwrap();
+        cache.clear();
     }
 }
 
@@ -45,75 +54,76 @@ impl super::IntrospectionCache for InMemoryIntrospectionCache {
 mod tests {
     #![allow(clippy::all)]
 
-    // TODO.
+    use crate::oidc::introspection::cache::IntrospectionCache;
+    use chrono::{Duration, Utc};
 
-    // use crate::oidc::discovery::discover;
-    // use openidconnect::TokenIntrospectionResponse;
+    use super::*;
 
-    // use super::*;
+    #[tokio::test]
+    async fn test_get_set() {
+        let c = InMemoryIntrospectionCache::new();
+        let t = &c as &dyn IntrospectionCache;
 
-    // const ZITADEL_URL: &str = "https://zitadel-libraries-l8boqa.zitadel.cloud";
-    // const PERSONAL_ACCESS_TOKEN: &str =
-    //     "dEnGhIFs3VnqcQU5D2zRSeiarB1nwH6goIKY0J8MWZbsnWcTuu1C59lW9DgCq1y096GYdXA";
+        let mut response = Response::new(true, Default::default());
+        response.set_exp(Some(Utc::now()));
 
-    // #[tokio::test]
-    // async fn introspect_fails_with_invalid_url() {
-    //     let result = introspect(
-    //         "foobar",
-    //         "foobar",
-    //         &AuthorityAuthentication::Basic {
-    //             client_id: "".to_string(),
-    //             client_secret: "".to_string(),
-    //         },
-    //         "token",
-    //     )
-    //     .await;
+        t.set("token1", response.clone()).await;
+        t.set("token2", response.clone()).await;
 
-    //     assert!(result.is_err());
-    //     assert!(matches!(
-    //         result.unwrap_err(),
-    //         IntrospectionError::ParseUrl { .. }
-    //     ));
-    // }
+        assert_eq!(c.cache.lock().unwrap().len(), 2);
 
-    // #[tokio::test]
-    // async fn introspect_fails_with_invalid_endpoint() {
-    //     let meta = discover(ZITADEL_URL).await.unwrap();
-    //     let result = introspect(
-    //         &meta.token_endpoint().unwrap().to_string(),
-    //         ZITADEL_URL,
-    //         &AuthorityAuthentication::Basic {
-    //             client_id: "".to_string(),
-    //             client_secret: "".to_string(),
-    //         },
-    //         "token",
-    //     )
-    //     .await;
+        assert!(t.get("token1").await.is_some());
+        assert!(t.get("token2").await.is_some());
+        assert!(t.get("token3").await.is_none());
+    }
 
-    //     assert!(result.is_err());
-    // }
+    #[tokio::test]
+    async fn test_non_exp_response() {
+        let c = InMemoryIntrospectionCache::new();
+        let t = &c as &dyn IntrospectionCache;
 
-    // #[tokio::test]
-    // async fn introspect_succeeds() {
-    //     let meta = discover(ZITADEL_URL).await.unwrap();
-    //     let result = introspect(
-    //         &meta
-    //             .additional_metadata()
-    //             .introspection_endpoint
-    //             .as_ref()
-    //             .unwrap()
-    //             .to_string(),
-    //         ZITADEL_URL,
-    //         &AuthorityAuthentication::Basic {
-    //             client_id: "194339055499018497@zitadel_rust_test".to_string(),
-    //             client_secret: "Ip56oGzxKL1rJ8JaleUVKL7qUlpZ1tqHQYRSd6JE1mTlTJ3pDkDzoObHdZsOg88B"
-    //                 .to_string(),
-    //         },
-    //         PERSONAL_ACCESS_TOKEN,
-    //     )
-    //     .await
-    //     .unwrap();
+        let response = Response::new(true, Default::default());
 
-    //     assert!(result.active());
-    // }
+        t.set("token1", response.clone()).await;
+        t.set("token2", response.clone()).await;
+
+        assert_eq!(c.cache.lock().unwrap().len(), 0);
+    }
+
+    #[tokio::test]
+    async fn test_clear() {
+        let c = InMemoryIntrospectionCache::new();
+        let t = &c as &dyn IntrospectionCache;
+
+        let mut response = Response::new(true, Default::default());
+        response.set_exp(Some(Utc::now()));
+
+        t.set("token1", response.clone()).await;
+        t.set("token2", response.clone()).await;
+
+        assert_eq!(c.cache.lock().unwrap().len(), 2);
+
+        t.clear().await;
+
+        assert_eq!(c.cache.lock().unwrap().len(), 0);
+    }
+
+    #[tokio::test]
+    async fn test_remove_expired_token() {
+        let c = InMemoryIntrospectionCache::new();
+        let t = &c as &dyn IntrospectionCache;
+
+        let mut response = Response::new(true, Default::default());
+        response.set_exp(Some(Utc::now() - Duration::seconds(10)));
+
+        t.set("token1", response.clone()).await;
+        t.set("token2", response.clone()).await;
+
+        assert_eq!(c.cache.lock().unwrap().len(), 2);
+
+        let _ = t.get("token1").await;
+        let _ = t.get("token2").await;
+
+        assert_eq!(c.cache.lock().unwrap().len(), 0);
+    }
 }

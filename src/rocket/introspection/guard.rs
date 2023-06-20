@@ -1,6 +1,5 @@
 use custom_error::custom_error;
 use openidconnect::TokenIntrospectionResponse;
-use rocket::data::N;
 use rocket::http::Status;
 use rocket::request::{FromRequest, Outcome};
 use rocket::{async_trait, Request};
