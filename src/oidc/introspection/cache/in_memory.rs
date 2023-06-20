@@ -17,6 +17,12 @@ impl InMemoryIntrospectionCache {
     }
 }
 
+impl Default for InMemoryIntrospectionCache {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 #[async_trait::async_trait]
 impl super::IntrospectionCache for InMemoryIntrospectionCache {
     async fn get(&self, token: &str) -> Option<Response> {
