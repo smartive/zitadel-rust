@@ -7,7 +7,7 @@ pub mod in_memory;
 
 type Response = super::ZitadelIntrospectionResponse;
 
-/// Trait that needs to be implemented by a cache.
+/// Implementation of an introspection cache.
 /// Enables caching the introspection results done by
 /// [introspect](crate::oidc::introspection::introspect).
 ///
@@ -19,9 +19,13 @@ type Response = super::ZitadelIntrospectionResponse;
 /// Non-active tokens SHOULD not be cached.
 #[async_trait::async_trait]
 pub trait IntrospectionCache: Send + Sync + std::fmt::Debug {
+    /// Retrieves the cached introspection result for the given token, if it exists.
     async fn get(&self, token: &str) -> Option<Response>;
 
+    /// Caches the given introspection result for the given token.
+    /// If the token is not active, the result is not cached.
     async fn set(&self, token: &str, response: Response);
 
+    /// Clears the cache.
     async fn clear(&self);
 }

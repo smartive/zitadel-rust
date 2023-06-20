@@ -68,9 +68,9 @@ impl IntrospectionConfigBuilder {
     #[cfg(feature = "introspection_cache")]
     pub fn with_introspection_cache(
         &mut self,
-        cache: Box<dyn IntrospectionCache>,
+        cache: impl IntrospectionCache + 'static,
     ) -> &mut IntrospectionConfigBuilder {
-        self.cache = Some(cache);
+        self.cache = Some(Box::new(cache));
 
         self
     }
