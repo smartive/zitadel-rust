@@ -12,6 +12,9 @@ use std::collections::HashMap;
 
 use crate::credentials::{Application, ApplicationError};
 
+#[cfg(feature = "introspection_cache")]
+pub mod cache;
+
 custom_error! {
     /// Error type for introspection related errors.
     pub IntrospectionError

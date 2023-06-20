@@ -5,6 +5,9 @@ use crate::oidc::discovery::{discover, DiscoveryError};
 use crate::oidc::introspection::AuthorityAuthentication;
 use crate::rocket::introspection::config::IntrospectionConfig;
 
+#[cfg(feature = "introspection_cache")]
+use crate::oidc::introspection::cache::IntrospectionCache;
+
 custom_error! {
     /// Error type for introspection config builder related errors.
     pub IntrospectionConfigBuilderError
@@ -20,6 +23,8 @@ custom_error! {
 pub struct IntrospectionConfigBuilder {
     authority: String,
     authentication: Option<AuthorityAuthentication>,
+    #[cfg(feature = "introspection_cache")]
+    cache: Option<Box<dyn IntrospectionCache>>,
 }
 
 impl IntrospectionConfigBuilder {
@@ -29,6 +34,8 @@ impl IntrospectionConfigBuilder {
         Self {
             authority: authority.to_string(),
             authentication: None,
+            #[cfg(feature = "introspection_cache")]
+            cache: None,
         }
     }
 
