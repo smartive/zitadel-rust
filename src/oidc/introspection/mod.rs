@@ -12,6 +12,9 @@ use std::collections::HashMap;
 
 use crate::credentials::{Application, ApplicationError};
 
+#[cfg(feature = "introspection_cache")]
+pub mod cache;
+
 custom_error! {
     /// Error type for introspection related errors.
     pub IntrospectionError
@@ -32,7 +35,7 @@ custom_error! {
 ///  `resource_owner_` are set.
 /// - When scope contains `urn:zitadel:iam:user:metadata`, the metadata hashmap will be
 ///   filled with the user metadata.
-#[derive(Clone, Debug, Serialize, Deserialize)]
+#[derive(Clone, Debug, Serialize, Deserialize, Default)]
 pub struct ZitadelIntrospectionExtraTokenFields {
     pub name: Option<String>,
     pub given_name: Option<String>,

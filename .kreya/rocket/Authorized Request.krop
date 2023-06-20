@@ -2,7 +2,8 @@
   "details": {
     "path": "/authed",
     "method": "GET",
-    "headers": []
+    "headers": [],
+    "pathParams": []
   },
   "requests": [
     {

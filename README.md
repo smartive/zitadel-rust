@@ -9,6 +9,26 @@ There exist a few examples in the `examples` directory.
 Go there to see the library in action, or head over to the
 [documentation](https://docs.rs/zitadel/latest/zitadel/) to see the full API documentation.
 
+### Development
+
+After you checkout the repository, you need ["just"](https://just.systems) to run
+certain tasks. Generating the gRPC clients is done via `just generate-grpc` or `just`
+(as it is configured to be the default action for just).
+
+For the generation to complete successfully, you need to have ["buf"](https://buf.build)
+and the required proto plugins installed.
+
+Required tooling:
+
+- [just](https://just.systems)
+- [buf](https://buf.build)
+- [protoc](https://grpc.io/docs/protoc-installation/)
+- `protoc-gen-prost`: `cargo install protoc-gen-prost`
+- `protoc-gen-tonic`: `cargo install protoc-gen-tonic`
+- `protoc-gen-prost-crate`: `cargo install protoc-gen-prost-crate`
+
+Installing the tools is also partially available via `just install-tools`.
+
 #### License
 
 <sup>
