@@ -52,7 +52,7 @@ oidc = ["credentials", "dep:base64-compat"]
 rocket = ["credentials", "oidc", "dep:rocket"]
 
 [dependencies]
-async-trait = { version = "0.1.69", optional = true }
+async-trait = { version = "0.1.70", optional = true }
 axum = { version = "0.6.18", optional = true, features = ["headers", "macros"] }
 axum-extra = { version = "0.7.4", optional = true }
 base64-compat = { version = "1", optional = true }
