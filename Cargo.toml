@@ -81,7 +81,7 @@ tonic = { version = "0.9", features = [
 tonic-types = { version = "0.9", optional = true }
 
 [dev-dependencies]
-chrono = "0.4.30"
+chrono = "0.4.31"
 tokio = { version = "1", features = ["macros", "rt-multi-thread"] }
 tower = { version = "0.4.13" }
 
