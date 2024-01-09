@@ -6,6 +6,8 @@ use axum::Router;
 use tokio::net::TcpListener;
 use zitadel::axum::introspection::{IntrospectedUser, IntrospectionStateBuilder};
 
+// Run example with cargo run --example <file name> -F axum to activate the axum feature
+
 async fn unauthed() -> String {
     "Hello Unauthorized User".into()
 }
