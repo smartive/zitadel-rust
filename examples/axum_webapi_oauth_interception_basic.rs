@@ -3,6 +3,7 @@ use std::net::SocketAddr;
 use axum::response::IntoResponse;
 use axum::routing::get;
 use axum::Router;
+use tokio::net::TcpListener;
 use zitadel::axum::introspection::{IntrospectedUser, IntrospectionStateBuilder};
 
 async fn unauthed() -> String {
@@ -34,11 +35,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .with_state(is);
 
     let addr = SocketAddr::from(([127, 0, 0, 1], 3001));
-    println!("listening on: {addr}");
-    axum::Server::bind(&addr)
-        .serve(app.into_make_service())
-        .await
-        .unwrap();
+    println!("listening on: {addr}, go to http://localhost:3001/authed or /unauthed");
+    let listener = TcpListener::bind(addr).await?;
+    axum::serve(listener, app.into_make_service()).await?;
 
     Ok(())
 }
