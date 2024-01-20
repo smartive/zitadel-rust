@@ -60,9 +60,9 @@ impl<'request> FromRequest<'request> for &'request IntrospectedUser {
     async fn from_request(request: &'request Request<'_>) -> Outcome<Self, Self::Error> {
         let auth: Vec<_> = request.headers().get("authorization").collect();
         if auth.len() > 1 {
-            return Outcome::Failure((Status::BadRequest, &IntrospectionGuardError::InvalidHeader));
+            return Outcome::Error((Status::BadRequest, &IntrospectionGuardError::InvalidHeader));
         } else if auth.is_empty() {
-            return Outcome::Failure((
+            return Outcome::Error((
                 Status::Unauthorized,
                 &IntrospectionGuardError::Unauthorized,
             ));
@@ -70,7 +70,7 @@ impl<'request> FromRequest<'request> for &'request IntrospectedUser {
 
         let token = auth[0];
         if !token.starts_with("Bearer ") {
-            return Outcome::Failure((Status::Unauthorized, &IntrospectionGuardError::WrongScheme));
+            return Outcome::Error((Status::Unauthorized, &IntrospectionGuardError::WrongScheme));
         }
 
         let result = request
@@ -140,7 +140,7 @@ impl<'request> FromRequest<'request> for &'request IntrospectedUser {
 
         match result {
             Ok(user) => Outcome::Success(user),
-            Err((status, error)) => Outcome::Failure((*status, error)),
+            Err((status, error)) => Outcome::Error((*status, error)),
         }
     }
 }

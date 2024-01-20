@@ -9,10 +9,10 @@ repository = "https://github.com/buehler/zitadel-rust"
 keywords = ["ZITADEL", "gRPC", "clients", "authentication", "oidc"]
 categories = ["authentication", "api-bindings"]
 include = [
-  "src/**/*.rs",
-  "Cargo.toml",
-  "LICENSE*",
-  "README.md",
+    "src/**/*.rs",
+    "Cargo.toml",
+    "LICENSE*",
+    "README.md",
 ]
 
 [features]
@@ -53,8 +53,8 @@ rocket = ["credentials", "oidc", "dep:rocket"]
 
 [dependencies]
 async-trait = { version = "0.1.74", optional = true }
-axum = { version = "0.6.20", optional = true, features = ["headers", "macros"] }
-axum-extra = { version = "0.8.0", optional = true }
+axum = { version = "0.7.4", optional = true, features = ["macros"] }
+axum-extra = { version = "0.9.2", optional = true, features = ["typed-header"] }
 base64-compat = { version = "1", optional = true }
 custom_error = "1.9.2"
 document-features = { version = "0.2", optional = true }
@@ -70,13 +70,13 @@ serde_json = { version = "1.0", optional = true }
 serde_urlencoded = { version = "0.7.1", optional = true }
 time = { version = "0.3.30", optional = true }
 tokio = { version = "1", optional = true, features = [
-  "macros",
-  "rt-multi-thread",
+    "macros",
+    "rt-multi-thread",
 ] }
 tonic = { version = "0.9", features = [
-  "tls",
-  "tls-roots",
-  "tls-roots-common",
+    "tls",
+    "tls-roots",
+    "tls-roots-common",
 ], optional = true }
 tonic-types = { version = "0.9", optional = true }
 

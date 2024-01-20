@@ -1,14 +1,16 @@
 use axum::{
     async_trait,
     extract::{FromRef, FromRequestParts},
-    headers::{authorization::Bearer, Authorization},
-    http::request::Parts,
+    http::{request::Parts, StatusCode},
     response::IntoResponse,
-    Json, RequestPartsExt, TypedHeader,
+    Json, RequestPartsExt,
+};
+use axum_extra::{
+    headers::{authorization::Bearer, Authorization},
+    TypedHeader,
 };
 use custom_error::custom_error;
 use openidconnect::TokenIntrospectionResponse;
-use reqwest::StatusCode;
 use serde_json::json;
 
 use crate::oidc::introspection::{introspect, IntrospectionError, ZitadelIntrospectionResponse};
@@ -69,9 +71,9 @@ pub struct IntrospectedUser {
 
 #[async_trait]
 impl<S> FromRequestParts<S> for IntrospectedUser
-where
-    IntrospectionConfig: FromRef<S>,
-    S: Send + Sync,
+    where
+        IntrospectionConfig: FromRef<S>,
+        S: Send + Sync,
 {
     type Rejection = IntrospectionGuardError;
 
@@ -89,7 +91,7 @@ where
             &config.authentication,
             bearer.token(),
         )
-        .await;
+            .await;
 
         let user: Result<IntrospectedUser, IntrospectionGuardError> = match res {
             Ok(res) => match res.active() {
