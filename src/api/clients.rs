@@ -94,6 +94,8 @@ impl ClientBuilder {
         // self.access_token = Some(access_token.to_string());
         // self.service_account = None;
         // self.auth_options = None;
+        // TODO: https://github.com/hyperium/tonic/issues/730
+        // https://blog.cloudflare.com/pin-and-unpin-in-rust
         self
     }
 
