@@ -10,6 +10,17 @@ use tonic::{service::Interceptor, Request, Status};
 
 use crate::credentials::{AuthenticationOptions, ServiceAccount};
 
+/// A simple noop interceptor that implements the Interceptor trait.
+/// This allows the client builder to always return an intercepted
+/// client.
+pub(crate) struct NoopInterceptor;
+
+impl Interceptor for NoopInterceptor {
+    fn call(&mut self, request: Request<()>) -> Result<Request<()>, Status> {
+        Ok(request)
+    }
+}
+
 /// Simple gRPC `Interceptor` that attaches a given access token to any request
 /// a client sends. The token is attached with the `Bearer` auth-scheme.
 ///

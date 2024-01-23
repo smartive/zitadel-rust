@@ -3,8 +3,15 @@
 //! modules provide access to functions that create clients with
 //! specific interceptors for authentication.
 
+use std::error::Error;
+
 use custom_error::custom_error;
+use tonic::codegen::InterceptedService;
+use tonic::service::Interceptor;
 use tonic::transport::{Channel, Endpoint};
+use tonic::{Request, Status};
+
+use crate::api::interceptors::{NoopInterceptor, ServiceAccountInterceptor};
 
 use super::zitadel::{
     admin::v1::admin_service_client::AdminServiceClient,
@@ -54,6 +61,84 @@ pub async fn create_admin_client(
 ) -> Result<AdminServiceClient<Channel>, ClientError> {
     let channel = get_channel(api_endpoint).await?;
     Ok(AdminServiceClient::new(channel))
+}
+
+pub struct ClientBuilder {
+    api_endpoint: String,
+    interceptor: Option<Intercept>,
+    // access_token: Option<String>,
+    // service_account: Option<ServiceAccount>,
+    // auth_options: Option<AuthenticationOptions>,
+}
+
+type Intercept = Box<dyn Fn(Request<()>) -> Result<Request<()>, Status>>;
+
+impl ClientBuilder {
+    pub fn new(api_endpoint: &str) -> Self {
+        Self {
+            api_endpoint: api_endpoint.to_string(),
+            interceptor: None,
+            // access_token: None,
+            // service_account: None,
+            // auth_options: None,
+        }
+    }
+
+    pub fn with_access_token(mut self, access_token: &str) -> Self {
+        let access_token = access_token.to_string();
+        self.interceptor = Some(Box::new(move |mut req: Request<()>| {
+            req.metadata_mut()
+                .insert("authorization", access_token.parse().unwrap());
+            Ok(req)
+        }));
+        // self.access_token = Some(access_token.to_string());
+        // self.service_account = None;
+        // self.auth_options = None;
+        self
+    }
+
+    // pub fn with_service_account(
+    //     mut self,
+    //     service_account: &ServiceAccount,
+    //     auth_options: Option<AuthenticationOptions>,
+    // ) -> Self {
+    //     self.access_token = None;
+    //     self.service_account = Some(service_account.clone());
+    //     self.auth_options = auth_options;
+    //     self
+    // }
+
+    pub async fn build_admin_client(
+        self,
+    ) -> Result<AdminServiceClient<InterceptedService<Channel, Intercept>>, Box<dyn Error>> {
+        let channel = get_channel(&self.api_endpoint).await?;
+        Ok(AdminServiceClient::with_interceptor(
+            channel,
+            self.interceptor
+                .unwrap_or(Box::new(move |req: Request<()>| Ok(req))),
+        ))
+
+        // return if let Some(access_token) = &self.access_token {
+        //     Ok(AdminServiceClient::with_interceptor(
+        //         channel,
+        //         Box::new(move |mut req: Request<()>| Ok(req)),
+        //     ))
+        // } else if let Some(service_account) = &self.service_account {
+        //     Ok(AdminServiceClient::with_interceptor(
+        //         channel,
+        //         ServiceAccountInterceptor::new(
+        //             &self.api_endpoint,
+        //             service_account,
+        //             self.auth_options.clone(),
+        //         ),
+        //     ))
+        // } else {
+        //     Ok(AdminServiceClient::with_interceptor(
+        //         channel,
+        //         NoopInterceptor {},
+        //     ))
+        // };
+    }
 }
 
 /// Create a new [`AuthServiceClient`] to access the
@@ -125,13 +210,14 @@ pub mod with_access_token {
     use tonic::codegen::InterceptedService;
     use tonic::transport::Channel;
 
-    use super::{get_channel, ClientError};
     use crate::api::interceptors::AccessTokenInterceptor;
     use crate::api::zitadel::{
         admin::v1::admin_service_client::AdminServiceClient,
         auth::v1::auth_service_client::AuthServiceClient,
         management::v1::management_service_client::ManagementServiceClient,
     };
+
+    use super::{get_channel, ClientError};
 
     /// Create a new [`AdminServiceClient`] to access the
     /// [Admin API](https://docs.zitadel.com/docs/apis/proto/admin) of ZITADEL.
@@ -250,7 +336,6 @@ pub mod with_service_account {
     use tonic::codegen::InterceptedService;
     use tonic::transport::Channel;
 
-    use super::{get_channel, ClientError};
     use crate::api::interceptors::ServiceAccountInterceptor;
     use crate::api::zitadel::{
         admin::v1::admin_service_client::AdminServiceClient,
@@ -258,6 +343,8 @@ pub mod with_service_account {
         management::v1::management_service_client::ManagementServiceClient,
     };
     use crate::credentials::{AuthenticationOptions, ServiceAccount};
+
+    use super::{get_channel, ClientError};
 
     /// Create a new [`AdminServiceClient`] to access the
     /// [Admin API](https://docs.zitadel.com/docs/apis/proto/admin) of ZITADEL.
