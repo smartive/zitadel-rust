@@ -3,6 +3,12 @@
 This repository contains the gRPC service clients and helpers/credentials/other utilities
 for [ZITADEL](https://github.com/zitadel/zitadel).
 
+The following features are present:
+- API clients for communication with the ZITADEL API (calling gRPC methods)
+- Credentials support for the API clients (access token and service account interceptors)
+- OIDC Introspection support for [rocket](https://rocket.rs)
+- OIDC Introspection support for [axum](https://github.com/tokio-rs/axum)
+
 ### Example
 
 There exist a few examples in the `examples` directory.
@@ -11,7 +17,7 @@ Go there to see the library in action, or head over to the
 
 ### Development
 
-After you checkout the repository, you need ["just"](https://just.systems) to run
+After you clone the repository, you need ["just"](https://just.systems) to run
 certain tasks. Generating the gRPC clients is done via `just generate-grpc` or `just`
 (as it is configured to be the default action for just).
 

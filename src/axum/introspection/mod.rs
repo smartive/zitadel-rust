@@ -14,6 +14,7 @@
 //! # use axum::response::IntoResponse;
 //! # use axum::routing::get;
 //! # use axum::Router;
+//! # use tokio::net::TcpListener;
 //! # use tokio::runtime::Builder;
 //! # use std::net::SocketAddr;
 //! #
@@ -32,8 +33,8 @@
 //!
 //! let addr = SocketAddr::from(([127, 0, 0, 1], 3001));
 //! println!("listening on: {addr}");
-//! axum::Server::bind(&addr)
-//!     .serve(app.into_make_service())
+//! let listener = TcpListener::bind(addr).await.unwrap();
+//! axum::serve(listener, app.into_make_service())
 //!     .await
 //!     .unwrap();
 //! # }
