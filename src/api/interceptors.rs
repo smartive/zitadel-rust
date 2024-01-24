@@ -10,13 +10,29 @@ use tonic::{service::Interceptor, Request, Status};
 
 use crate::credentials::{AuthenticationOptions, ServiceAccount};
 
-/// A simple noop interceptor that implements the Interceptor trait.
-/// This allows the client builder to always return an intercepted
-/// client.
-pub(crate) struct NoopInterceptor;
+pub struct ChainedInterceptor {
+    interceptors: Vec<Box<dyn Interceptor>>,
+}
 
-impl Interceptor for NoopInterceptor {
+impl ChainedInterceptor {
+    pub fn new() -> Self {
+        Self {
+            interceptors: Vec::new(),
+        }
+    }
+
+    pub fn add_interceptor(mut self, interceptor: Box<dyn Interceptor>) -> Self {
+        self.interceptors.push(interceptor);
+        self
+    }
+}
+
+impl Interceptor for ChainedInterceptor {
     fn call(&mut self, request: Request<()>) -> Result<Request<()>, Status> {
+        let mut request = request;
+        for interceptor in &mut self.interceptors {
+            request = interceptor.call(request)?;
+        }
         Ok(request)
     }
 }
