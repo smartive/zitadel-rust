@@ -31,11 +31,11 @@ use crate::credentials::{AuthenticationOptions, ServiceAccount};
 /// # #[tokio::main]
 /// # async fn main() -> Result<(), Box<dyn std::error::Error>> {
 /// use zitadel::api::{
-///     clients::with_access_token::create_auth_client, zitadel::auth::v1::GetMyUserRequest,
+///     clients::ClientBuilder, zitadel::auth::v1::GetMyUserRequest,
 /// };
 /// # const PERSONAL_ACCESS_TOKEN: &str = "dEnGhIFs3VnqcQU5D2zRSeiarB1nwH6goIKY0J8MWZbsnWcTuu1C59lW9DgCq1y096GYdXA";
 /// # const ZITADEL_URL: &str = "https://zitadel-libraries-l8boqa.zitadel.cloud";
-/// let mut client = create_auth_client(ZITADEL_URL, PERSONAL_ACCESS_TOKEN).await?;
+/// let mut client = ClientBuilder::new(ZITADEL_URL).with_access_token(PERSONAL_ACCESS_TOKEN).build_auth_client().await?;
 /// let user = client.get_my_user(GetMyUserRequest {}).await?.into_inner();
 /// println!("{:#?}", user);
 /// # Ok(())
@@ -98,7 +98,7 @@ impl Interceptor for AccessTokenInterceptor {
 /// # #[tokio::main]
 /// # async fn main() -> Result<(), Box<dyn std::error::Error>> {
 /// use zitadel::{
-///     api::{clients::with_service_account::create_auth_client, zitadel::auth::v1::GetMyUserRequest},
+///     api::{clients::ClientBuilder, zitadel::auth::v1::GetMyUserRequest},
 ///     credentials::{AuthenticationOptions, ServiceAccount},
 /// };
 /// # const SERVICE_ACCOUNT: &str = r#"
@@ -110,15 +110,16 @@ impl Interceptor for AccessTokenInterceptor {
 /// # }"#;
 /// # const ZITADEL_URL: &str = "https://zitadel-libraries-l8boqa.zitadel.cloud";
 /// let service_account = ServiceAccount::load_from_json(SERVICE_ACCOUNT)?;
-/// let mut client = create_auth_client(
-///     ZITADEL_URL,
-///     &service_account,
-///     Some(AuthenticationOptions {
-///         api_access: true,
-///         ..Default::default()
-///     }),
-/// )
-/// .await?;
+/// let mut client = ClientBuilder::new(ZITADEL_URL)
+///     .with_service_account(
+///         &service_account,
+///         Some(AuthenticationOptions {
+///             api_access: true,
+///             ..Default::default()
+///         })
+///     )
+///     .build_auth_client()
+///     .await?;
 /// let user = client.get_my_user(GetMyUserRequest {}).await?.into_inner();
 /// println!("{:#?}", user);
 /// # Ok(())
@@ -145,10 +146,7 @@ impl ServiceAccountInterceptor {
         Self {
             audience: audience.to_string(),
             service_account: service_account.clone(),
-            auth_options: match auth_options {
-                Some(options) => options,
-                None => AuthenticationOptions::default(),
-            },
+            auth_options: auth_options.unwrap_or_default(),
             token: None,
             token_expiry: None,
         }
