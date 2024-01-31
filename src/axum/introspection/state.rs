@@ -8,6 +8,12 @@ pub struct IntrospectionState {
     pub(crate) config: IntrospectionConfig,
 }
 
+impl IntrospectionState {
+    pub fn config(&self) -> &IntrospectionConfig {
+        &self.config
+    }
+}
+
 /// Configuration that must be inject into the axum application state. Used by the
 /// [IntrospectionStateBuilder](super::IntrospectionStateBuilder). This struct is also used to create the [IntrospectionState](IntrospectionState)
 #[derive(Debug, Clone)]
