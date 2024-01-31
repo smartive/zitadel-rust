@@ -1,14 +1,16 @@
+use axum::http::StatusCode;
 use axum::{
     async_trait,
     extract::{FromRef, FromRequestParts},
-    headers::{authorization::Bearer, Authorization},
     http::request::Parts,
     response::IntoResponse,
-    Json, RequestPartsExt, TypedHeader,
+    Json, RequestPartsExt,
 };
+use axum_extra::headers::authorization::Bearer;
+use axum_extra::headers::Authorization;
+use axum_extra::TypedHeader;
 use custom_error::custom_error;
 use openidconnect::TokenIntrospectionResponse;
-use reqwest::StatusCode;
 use serde_json::json;
 
 use crate::oidc::introspection::{introspect, IntrospectionError, ZitadelIntrospectionResponse};
@@ -51,7 +53,7 @@ impl IntoResponse for IntrospectionGuardError {
     }
 }
 
-/// struct for the extracted user. The extracted user will always be valid, when fetched in a
+/// Struct for the extracted user. The extracted user will always be valid, when fetched in a
 /// request function arguments. If not the api will return with an appropriate error.
 #[derive(Debug)]
 pub struct IntrospectedUser {
@@ -132,10 +134,10 @@ mod tests {
     use axum::routing::get;
     use axum::Router;
     use tokio::runtime::Builder;
+    use tower::ServiceExt;
 
     use crate::axum::introspection::{IntrospectionState, IntrospectionStateBuilder};
     use crate::credentials::Application;
-    use tower::ServiceExt;
 
     use super::*;
 
