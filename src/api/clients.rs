@@ -46,7 +46,7 @@ enum AuthType {
 /// stays the same and is not dependent on the authentication type used.
 /// The builder can always return `Client<InterceptedService<Channel, ChainedInterceptor>>`.
 pub struct ChainedInterceptor {
-    interceptors: Vec<Box<dyn Interceptor>>,
+    interceptors: Vec<Box<dyn Interceptor + Send>>,
 }
 
 impl ChainedInterceptor {
@@ -56,7 +56,7 @@ impl ChainedInterceptor {
         }
     }
 
-    pub(crate) fn add_interceptor(mut self, interceptor: Box<dyn Interceptor>) -> Self {
+    pub(crate) fn add_interceptor(mut self, interceptor: Box<dyn Interceptor + Send>) -> Self {
         self.interceptors.push(interceptor);
         self
     }
