@@ -61,7 +61,7 @@ mod tests {
     #![allow(clippy::all)]
 
     use crate::oidc::introspection::cache::IntrospectionCache;
-    use chrono::{Duration, Utc};
+    use chrono::{TimeDelta, Utc};
 
     use super::*;
 
@@ -120,7 +120,7 @@ mod tests {
         let t = &c as &dyn IntrospectionCache;
 
         let mut response = Response::new(true, Default::default());
-        response.set_exp(Some(Utc::now() - Duration::seconds(10)));
+        response.set_exp(Some(Utc::now() - TimeDelta::try_seconds(10).unwrap()));
 
         t.set("token1", response.clone()).await;
         t.set("token2", response.clone()).await;
