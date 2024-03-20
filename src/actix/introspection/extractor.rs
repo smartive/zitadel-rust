@@ -8,6 +8,10 @@ use openidconnect::TokenIntrospectionResponse;
 use crate::actix::introspection::config::IntrospectionConfig;
 use crate::oidc::introspection::{introspect, ZitadelIntrospectionResponse};
 
+/// Struct for the handler function that requires an authenticated user.
+/// Contains various information about the given token. The fields are optional
+/// since a machine user does not have a profile or (varying by scope) not all
+/// fields are returned from the introspection endpoint.
 #[derive(Debug)]
 pub struct IntrospectedUser {
     /// UserID of the introspected user (OIDC Field "sub").
