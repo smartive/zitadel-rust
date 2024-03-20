@@ -122,7 +122,7 @@
 
 pub use config::IntrospectionConfig;
 pub use config_builder::{IntrospectionConfigBuilder, IntrospectionConfigBuilderError};
-pub use extractor::IntrospectedUser;
+pub use extractor::{IntrospectedUser, IntrospectionExtractorError};
 
 mod config;
 mod config_builder;

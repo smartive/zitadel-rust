@@ -3,10 +3,23 @@ use std::{future::Future, pin::Pin};
 use actix_web::dev::Payload;
 use actix_web::error::{ErrorInternalServerError, ErrorUnauthorized};
 use actix_web::{Error, FromRequest, HttpRequest};
+use custom_error::custom_error;
 use openidconnect::TokenIntrospectionResponse;
 
 use crate::actix::introspection::config::IntrospectionConfig;
-use crate::oidc::introspection::{introspect, ZitadelIntrospectionResponse};
+use crate::oidc::introspection::{introspect, IntrospectionError, ZitadelIntrospectionResponse};
+
+custom_error! {
+    /// Error type for extractor related errors.
+    pub IntrospectionExtractorError
+        MissingConfig = "no introspection config given to actix app data",
+        Unauthorized = "no HTTP authorization header found",
+        InvalidHeader = "authorization header is invalid",
+        WrongScheme = "Authorization header is not a bearer token",
+        Introspection{source: IntrospectionError} = "introspection returned an error: {source}",
+        Inactive = "access token is inactive",
+        NoUserId = "introspection result contained no user id",
+}
 
 /// Struct for the handler function that requires an authenticated user.
 /// Contains various information about the given token. The fields are optional
@@ -50,24 +63,32 @@ impl FromRequest for IntrospectedUser {
         let config = req.app_data::<IntrospectionConfig>();
         if config.is_none() {
             return Box::pin(async {
-                Err(ErrorInternalServerError("IntrospectionConfig missing"))
+                Err(ErrorInternalServerError(
+                    IntrospectionExtractorError::MissingConfig,
+                ))
             });
         }
 
         let auth = req.headers().get("authorization");
         if auth.is_none() {
-            return Box::pin(async { Err(ErrorUnauthorized("Authorization header missing")) });
+            return Box::pin(async {
+                Err(ErrorUnauthorized(IntrospectionExtractorError::Unauthorized))
+            });
         }
 
         let auth = auth.unwrap().to_str();
         if auth.is_err() {
-            return Box::pin(async { Err(ErrorUnauthorized("Authorization header invalid")) });
+            return Box::pin(async {
+                Err(ErrorUnauthorized(
+                    IntrospectionExtractorError::InvalidHeader,
+                ))
+            });
         }
 
         let token = auth.unwrap();
         if !token.starts_with("Bearer ") {
             return Box::pin(async {
-                Err(ErrorUnauthorized("Authorization header has wrong scheme"))
+                Err(ErrorUnauthorized(IntrospectionExtractorError::WrongScheme))
             });
         }
 
@@ -84,14 +105,16 @@ impl FromRequest for IntrospectedUser {
             .await;
 
             if let Err(source) = result {
-                return Err(ErrorInternalServerError(source));
+                return Err(ErrorInternalServerError(
+                    IntrospectionExtractorError::Introspection { source },
+                ));
             }
 
             let result = result.unwrap();
             match result.active() {
                 true if result.sub().is_some() => Ok(result.into()),
-                false => Err(ErrorUnauthorized("User not active")),
-                _ => Err(ErrorUnauthorized("User not found")),
+                false => Err(ErrorUnauthorized(IntrospectionExtractorError::Inactive)),
+                _ => Err(ErrorUnauthorized(IntrospectionExtractorError::NoUserId)),
             }
         })
     }
