@@ -23,6 +23,7 @@
 //! inject it into rocket.
 //!
 //! ```no_run
+//! # use artix_web::{App, HttpServer};
 //! # use zitadel::credentials::Application;
 //! # use zitadel::actix::introspection::IntrospectionConfigBuilder;
 //! # const APPLICATION: &str = r#"
@@ -34,7 +35,7 @@
 //! #         "clientId": "181963751145144577@zitadel_rust_test"
 //! #     }"#;
 //! #[actix_web::main]
-//! async fn main() -> _ {
+//! async fn main() -> std::io::Result<()> {
 //!     let config = IntrospectionConfigBuilder::new("https://zitadel-libraries-l8boqa.zitadel.cloud")
 //!         .with_jwt_profile(Application::load_from_json(APPLICATION).unwrap())
 //!         .build()
@@ -58,7 +59,7 @@
 //! OAuth introspection.
 //!
 //! ```no_run
-//! # use zitadel::rocket::introspection::IntrospectedUser;
+//! # use zitadel::actix::introspection::IntrospectedUser;
 //! #[actix_web::get("/authed")]
 //! async fn authed(user: IntrospectedUser) -> impl actix_web::Responder {
 //!     format!(
@@ -71,6 +72,7 @@
 //! ### Full working example with JWT Profile
 //!
 //! ```no_run
+//! use artix_web::{App, HttpServer};
 //! use zitadel::{
 //!     credentials::Application,
 //!     actix::introspection::{IntrospectedUser, IntrospectionConfigBuilder},
