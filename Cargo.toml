@@ -18,6 +18,9 @@ include = [
 [features]
 default = []
 
+## Feature that enables support for the [actix framework](https://actix.rs/).
+actix = ["credentials", "oidc", "dep:actix-web"]
+
 ## The API feature enables the gRPC service clients to access the ZITADEL API.
 api = ["dep:prost", "dep:prost-types", "dep:tonic", "dep:tonic-types", "dep:pbjson-types"]
 
@@ -52,6 +55,7 @@ oidc = ["credentials", "dep:base64-compat"]
 rocket = ["credentials", "oidc", "dep:rocket"]
 
 [dependencies]
+actix-web = { version = "4.5.1", optional = true }
 async-trait = { version = "0.1.78", optional = true }
 axum = { version = "0.7", optional = true, features = ["macros"] }
 axum-extra = { version = "0.9", optional = true, features = ["typed-header"] }
