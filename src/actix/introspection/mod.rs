@@ -23,7 +23,7 @@
 //! inject it into rocket.
 //!
 //! ```no_run
-//! # use artix_web::{App, HttpServer};
+//! # use actix_web::{App, HttpServer};
 //! # use zitadel::credentials::Application;
 //! # use zitadel::actix::introspection::IntrospectionConfigBuilder;
 //! # const APPLICATION: &str = r#"
@@ -72,7 +72,7 @@
 //! ### Full working example with JWT Profile
 //!
 //! ```no_run
-//! use artix_web::{App, HttpServer};
+//! use actix_web::{App, HttpServer};
 //! use zitadel::{
 //!     credentials::Application,
 //!     actix::introspection::{IntrospectedUser, IntrospectionConfigBuilder},
