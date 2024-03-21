@@ -35,6 +35,8 @@
     cfg_attr(doc, doc = ::document_features::document_features!())
 )]
 
+#[cfg(feature = "actix")]
+pub mod actix;
 #[cfg(feature = "api")]
 pub mod api;
 #[cfg(feature = "axum")]
