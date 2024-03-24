@@ -56,7 +56,7 @@ rocket = ["credentials", "oidc", "dep:rocket"]
 
 [dependencies]
 actix-web = { version = "4.5.1", optional = true }
-async-trait = { version = "0.1.78", optional = true }
+async-trait = { version = "0.1.79", optional = true }
 axum = { version = "0.7", optional = true, features = ["macros"] }
 axum-extra = { version = "0.9", optional = true, features = ["typed-header"] }
 base64-compat = { version = "1", optional = true }
