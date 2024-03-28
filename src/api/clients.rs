@@ -4,6 +4,7 @@
 //! specific interceptors for authentication.
 
 use std::error::Error;
+use std::sync::Arc;
 
 use custom_error::custom_error;
 use tonic::codegen::InterceptedService;
@@ -11,7 +12,9 @@ use tonic::service::Interceptor;
 use tonic::transport::{Channel, Endpoint};
 use tonic::{Request, Status};
 
-use crate::api::interceptors::{AccessTokenInterceptor, ServiceAccountInterceptor};
+use crate::api::interceptors::{
+    AccessTokenInterceptor, InterceptorImmutable, ServiceAccountInterceptor,
+};
 use crate::api::zitadel::oidc::v2beta::oidc_service_client::OidcServiceClient;
 use crate::api::zitadel::org::v2beta::organization_service_client::OrganizationServiceClient;
 use crate::api::zitadel::session::v2beta::session_service_client::SessionServiceClient;
@@ -45,8 +48,9 @@ enum AuthType {
 /// would create its own return type. With this interceptor, the return type
 /// stays the same and is not dependent on the authentication type used.
 /// The builder can always return `Client<InterceptedService<Channel, ChainedInterceptor>>`.
+#[derive(Clone)]
 pub struct ChainedInterceptor {
-    interceptors: Vec<Box<dyn Interceptor + Send>>,
+    interceptors: Vec<Arc<dyn InterceptorImmutable + Send + Sync>>,
 }
 
 impl ChainedInterceptor {
@@ -56,19 +60,29 @@ impl ChainedInterceptor {
         }
     }
 
-    pub(crate) fn add_interceptor(mut self, interceptor: Box<dyn Interceptor + Send>) -> Self {
+    pub(crate) fn add_interceptor(
+        mut self,
+        interceptor: Arc<dyn InterceptorImmutable + Send + Sync>,
+    ) -> Self {
         self.interceptors.push(interceptor);
         self
     }
 }
 
-impl Interceptor for ChainedInterceptor {
-    fn call(&mut self, request: Request<()>) -> Result<Request<()>, Status> {
+impl InterceptorImmutable for ChainedInterceptor {
+    fn call(&self, request: Request<()>) -> Result<Request<()>, Status> {
         let mut request = request;
-        for interceptor in &mut self.interceptors {
+        for interceptor in &self.interceptors {
+            let interceptor = Arc::clone(interceptor);
             request = interceptor.call(request)?;
         }
         Ok(request)
+    }
+}
+
+impl Interceptor for ChainedInterceptor {
+    fn call(&mut self, request: Request<()>) -> Result<Request<()>, Status> {
+        InterceptorImmutable::call(self, request)
     }
 }
 
@@ -317,11 +331,11 @@ impl ClientBuilder {
         match &self.auth_type {
             AuthType::AccessToken(token) => {
                 interceptor =
-                    interceptor.add_interceptor(Box::new(AccessTokenInterceptor::new(token)));
+                    interceptor.add_interceptor(Arc::new(AccessTokenInterceptor::new(token)));
             }
             AuthType::ServiceAccount(service_account, auth_options) => {
                 interceptor =
-                    interceptor.add_interceptor(Box::new(ServiceAccountInterceptor::new(
+                    interceptor.add_interceptor(Arc::new(ServiceAccountInterceptor::new(
                         &self.api_endpoint,
                         service_account,
                         auth_options.clone(),
