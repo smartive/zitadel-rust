@@ -18,9 +18,9 @@ impl IntrospectionState {
 /// [IntrospectionStateBuilder](super::IntrospectionStateBuilder). This struct is also used to create the [IntrospectionState](IntrospectionState)
 #[derive(Debug, Clone)]
 pub struct IntrospectionConfig {
-    pub(crate) authority: String,
-    pub(crate) authentication: AuthorityAuthentication,
-    pub(crate) introspection_uri: IntrospectionUrl,
+    pub authority: String,
+    pub authentication: AuthorityAuthentication,
+    pub introspection_uri: IntrospectionUrl,
 }
 
 impl FromRef<IntrospectionState> for IntrospectionConfig {
