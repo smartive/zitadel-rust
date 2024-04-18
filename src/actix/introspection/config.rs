@@ -3,7 +3,7 @@ use openidconnect::IntrospectionUrl;
 use crate::oidc::introspection::AuthorityAuthentication;
 
 /// Configuration that must be injected into
-/// [state](https://actix.rs/docs/application#state) of actix 
+/// [state](https://actix.rs/docs/application#state) of actix
 /// to enable the OAuth token introspection authentication method.
 ///
 /// Use the [IntrospectionConfigBuilder](super::IntrospectionConfigBuilder)
