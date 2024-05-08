@@ -3,12 +3,18 @@
 //! interceptors is to authenticate the clients to ZITADEL with
 //! provided credentials.
 
+use std::sync::{Arc, RwLock};
 use std::thread;
 
 use tokio::runtime::Builder;
 use tonic::{service::Interceptor, Request, Status};
 
 use crate::credentials::{AuthenticationOptions, ServiceAccount};
+
+pub(crate) trait InterceptorImmutable {
+    /// Intercept a request before it is sent, optionally cancelling it.
+    fn call(&self, request: Request<()>) -> Result<Request<()>, Status>;
+}
 
 /// Simple gRPC `Interceptor` that attaches a given access token to any request
 /// a client sends. The token is attached with the `Bearer` auth-scheme.
@@ -41,8 +47,9 @@ use crate::credentials::{AuthenticationOptions, ServiceAccount};
 /// # Ok(())
 /// # }
 /// ```
+#[derive(Clone)]
 pub struct AccessTokenInterceptor {
-    access_token: String,
+    access_token: std::sync::Arc<String>,
 }
 
 impl AccessTokenInterceptor {
@@ -55,13 +62,13 @@ impl AccessTokenInterceptor {
     ///   and the corresponding [`authenticate`][crate::credentials::ServiceAccount::authenticate] method
     pub fn new(token: &str) -> Self {
         AccessTokenInterceptor {
-            access_token: token.to_string(),
+            access_token: Arc::new(token.to_string()),
         }
     }
 }
 
-impl Interceptor for AccessTokenInterceptor {
-    fn call(&mut self, mut request: Request<()>) -> Result<Request<()>, Status> {
+impl InterceptorImmutable for AccessTokenInterceptor {
+    fn call(&self, mut request: Request<()>) -> Result<Request<()>, Status> {
         let meta = request.metadata_mut();
         if !meta.contains_key("authorization") {
             meta.insert(
@@ -70,6 +77,12 @@ impl Interceptor for AccessTokenInterceptor {
             );
         }
         Ok(request)
+    }
+}
+
+impl Interceptor for AccessTokenInterceptor {
+    fn call(&mut self, request: Request<()>) -> Result<Request<()>, Status> {
+        InterceptorImmutable::call(self, request)
     }
 }
 
@@ -125,7 +138,13 @@ impl Interceptor for AccessTokenInterceptor {
 /// # Ok(())
 /// # }
 /// ```
+#[derive(Clone)]
 pub struct ServiceAccountInterceptor {
+    inner: Arc<RwLock<ServiceAccountInterceptorInner>>,
+}
+
+#[derive(Clone)]
+pub(crate) struct ServiceAccountInterceptorInner {
     audience: String,
     service_account: ServiceAccount,
     auth_options: AuthenticationOptions,
@@ -143,22 +162,37 @@ impl ServiceAccountInterceptor {
         service_account: &ServiceAccount,
         auth_options: Option<AuthenticationOptions>,
     ) -> Self {
-        Self {
+        let inner = ServiceAccountInterceptorInner {
             audience: audience.to_string(),
             service_account: service_account.clone(),
             auth_options: auth_options.unwrap_or_default(),
             token: None,
             token_expiry: None,
+        };
+
+        ServiceAccountInterceptor {
+            inner: Arc::new(RwLock::new(inner)),
         }
     }
 }
 
-impl Interceptor for ServiceAccountInterceptor {
-    fn call(&mut self, mut request: tonic::Request<()>) -> Result<tonic::Request<()>, Status> {
+impl InterceptorImmutable for ServiceAccountInterceptor {
+    fn call(&self, mut request: tonic::Request<()>) -> Result<tonic::Request<()>, Status> {
+        use std::ops::Deref;
+        let ServiceAccountInterceptorInner {
+            audience,
+            service_account,
+            auth_options,
+            token,
+            token_expiry,
+            // We unwrap the RWLock to propagate the error if any
+            // thread panics and the lock is poisoned
+        } = self.inner.read().unwrap().deref().clone();
+
         let meta = request.metadata_mut();
         if !meta.contains_key("authorization") {
-            if let Some(token) = &self.token {
-                if let Some(expiry) = self.token_expiry {
+            if let Some(token) = &token {
+                if let Some(expiry) = token_expiry {
                     if expiry > time::OffsetDateTime::now_utc() {
                         meta.insert(
                             "authorization",
@@ -170,14 +204,11 @@ impl Interceptor for ServiceAccountInterceptor {
                 }
             }
 
-            let aud = self.audience.clone();
-            let auth = self.auth_options.clone();
-            let sa = self.service_account.clone();
-
             let token = thread::spawn(move || {
                 let rt = Builder::new_multi_thread().enable_all().build().unwrap();
                 rt.block_on(async {
-                    sa.authenticate_with_options(&aud, &auth)
+                    service_account
+                        .authenticate_with_options(&audience, &auth_options)
                         .await
                         .map_err(|e| Status::internal(e.to_string()))
                 })
@@ -187,8 +218,10 @@ impl Interceptor for ServiceAccountInterceptor {
                 .join()
                 .map_err(|_| Status::internal("could not fetch token"))??;
 
-            self.token = Some(token.clone());
-            self.token_expiry = Some(time::OffsetDateTime::now_utc() + time::Duration::minutes(59));
+            let mut inner = self.inner.write().unwrap();
+            inner.token = Some(token.clone());
+            inner.token_expiry =
+                Some(time::OffsetDateTime::now_utc() + time::Duration::minutes(59));
 
             meta.insert(
                 "authorization",
@@ -197,6 +230,12 @@ impl Interceptor for ServiceAccountInterceptor {
         }
 
         Ok(request)
+    }
+}
+
+impl Interceptor for ServiceAccountInterceptor {
+    fn call(&mut self, request: tonic::Request<()>) -> Result<tonic::Request<()>, Status> {
+        InterceptorImmutable::call(self, request)
     }
 }
 
@@ -333,10 +372,13 @@ mod tests {
         let sa = ServiceAccount::load_from_json(SERVICE_ACCOUNT).unwrap();
         let mut interceptor = ServiceAccountInterceptor::new(ZITADEL_URL, &sa, None);
         interceptor.call(Request::new(())).unwrap();
-        let token = interceptor.token.clone().unwrap();
+        let token = interceptor.inner.read().unwrap().token.clone().unwrap();
         interceptor.call(Request::new(())).unwrap();
 
-        assert_eq!(token, interceptor.token.unwrap());
+        assert_eq!(
+            token,
+            interceptor.inner.read().unwrap().token.clone().unwrap()
+        );
     }
 
     #[tokio::test]
@@ -344,9 +386,12 @@ mod tests {
         let sa = ServiceAccount::load_from_json(SERVICE_ACCOUNT).unwrap();
         let mut interceptor = ServiceAccountInterceptor::new(ZITADEL_URL, &sa, None);
         interceptor.call(Request::new(())).unwrap();
-        let token = interceptor.token.clone().unwrap();
+        let token = interceptor.inner.read().unwrap().token.clone().unwrap();
         interceptor.call(Request::new(())).unwrap();
 
-        assert_eq!(token, interceptor.token.unwrap());
+        assert_eq!(
+            token,
+            interceptor.inner.read().unwrap().token.clone().unwrap()
+        );
     }
 }
