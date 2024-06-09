@@ -3,6 +3,14 @@ use openidconnect::TokenIntrospectionResponse;
 use rocket::http::Status;
 use rocket::request::{FromRequest, Outcome};
 use rocket::{async_trait, Request};
+#[cfg(feature = "rocket_okapi")]
+use rocket_okapi::request::{OpenApiFromRequest, RequestHeaderInput};
+#[cfg(feature = "rocket_okapi")]
+use rocket_okapi::gen::OpenApiGenerator;
+#[cfg(feature = "rocket_okapi")]
+use rocket_okapi::okapi::openapi3::{SecurityScheme, SecurityRequirement, Responses};
+#[cfg(feature = "rocket_okapi")]
+use rocket_okapi::okapi::Map;
 
 use crate::oidc::introspection::{introspect, IntrospectionError, ZitadelIntrospectionResponse};
 use crate::rocket::introspection::IntrospectionConfig;
@@ -139,6 +147,35 @@ impl<'request> FromRequest<'request> for &'request IntrospectedUser {
             Ok(user) => Outcome::Success(user),
             Err((status, error)) => Outcome::Error((*status, error)),
         }
+    }
+}
+
+#[cfg(feature = "rocket_okapi")]
+impl<'a> OpenApiFromRequest<'a> for &'a IntrospectedUser {
+    fn from_request_input(
+        _gen: &mut OpenApiGenerator,
+        name: String,
+        required: bool,
+    ) -> rocket_okapi::Result<RequestHeaderInput> {
+        let security_scheme = SecurityScheme {
+            data: rocket_okapi::okapi::openapi3::SecuritySchemeData::Http {
+                scheme: "bearer".to_string(),
+                bearer_format: None,
+            },
+            description: Some("Bearer token for accessing the API".to_string()),
+            extensions: Map::new(),
+        };
+        let mut requirement = SecurityRequirement::new();
+        requirement.insert(name, vec![]);
+        Ok(RequestHeaderInput::Security(
+            "Authorization".to_string(),
+            security_scheme,
+            requirement,
+        ))
+    }
+
+    fn get_responses(_gen: &mut OpenApiGenerator) -> rocket_okapi::Result<Responses> {
+        Ok(Responses::default())
     }
 }
 
