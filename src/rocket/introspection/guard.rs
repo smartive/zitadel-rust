@@ -4,13 +4,13 @@ use rocket::http::Status;
 use rocket::request::{FromRequest, Outcome};
 use rocket::{async_trait, Request};
 #[cfg(feature = "rocket_okapi")]
-use rocket_okapi::request::{OpenApiFromRequest, RequestHeaderInput};
-#[cfg(feature = "rocket_okapi")]
 use rocket_okapi::gen::OpenApiGenerator;
 #[cfg(feature = "rocket_okapi")]
-use rocket_okapi::okapi::openapi3::{SecurityScheme, SecurityRequirement, Responses};
+use rocket_okapi::okapi::openapi3::{Responses, SecurityRequirement, SecurityScheme};
 #[cfg(feature = "rocket_okapi")]
 use rocket_okapi::okapi::Map;
+#[cfg(feature = "rocket_okapi")]
+use rocket_okapi::request::{OpenApiFromRequest, RequestHeaderInput};
 
 use crate::oidc::introspection::{introspect, IntrospectionError, ZitadelIntrospectionResponse};
 use crate::rocket::introspection::IntrospectionConfig;
@@ -154,28 +154,32 @@ impl<'request> FromRequest<'request> for &'request IntrospectedUser {
 impl<'a> OpenApiFromRequest<'a> for &'a IntrospectedUser {
     fn from_request_input(
         _gen: &mut OpenApiGenerator,
-        name: String,
-        required: bool,
+        _name: String,
+        _required: bool,
+        request: &Request,
     ) -> rocket_okapi::Result<RequestHeaderInput> {
+        // Setup global requirement for Security scheme
         let security_scheme = SecurityScheme {
-            data: rocket_okapi::okapi::openapi3::SecuritySchemeData::Http {
-                scheme: "bearer".to_string(),
-                bearer_format: None,
+            description: Some(
+                "Use OpenID Connect to authenticate. (does not work in RapiDoc at all)".to_owned(),
+            ),
+            data: SecuritySchemeData::OpenIdConnect {
+                open_id_connect_url: "https://auth.domain.com/.well-known/openid-configuration"
+                    .to_owned(),
             },
-            description: Some("Bearer token for accessing the API".to_string()),
-            extensions: Map::new(),
+            extensions: Object::default(),
         };
-        let mut requirement = SecurityRequirement::new();
-        requirement.insert(name, vec![]);
+        // Add the requirement for this route/endpoint
+        // This can change between routes.
+        let mut security_req = SecurityRequirement::new();
+        // Each security requirement needs to be met before access is allowed.
+        security_req.insert("OpenID".to_owned(), Vec::new());
+        // These vvvv-------^^^^^^^ values need to match exactly!
         Ok(RequestHeaderInput::Security(
-            "Authorization".to_string(),
+            "OpenID".to_owned(),
             security_scheme,
-            requirement,
+            security_req,
         ))
-    }
-
-    fn get_responses(_gen: &mut OpenApiGenerator) -> rocket_okapi::Result<Responses> {
-        Ok(Responses::default())
     }
 }
 
