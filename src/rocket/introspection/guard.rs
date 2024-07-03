@@ -156,7 +156,6 @@ impl<'a> OpenApiFromRequest<'a> for &'a IntrospectedUser {
         _gen: &mut OpenApiGenerator,
         _name: String,
         _required: bool,
-        request: &Request,
     ) -> rocket_okapi::Result<RequestHeaderInput> {
         // Setup global requirement for Security scheme
         let security_scheme = SecurityScheme {
