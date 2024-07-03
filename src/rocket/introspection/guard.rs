@@ -6,7 +6,9 @@ use rocket::{async_trait, Request};
 #[cfg(feature = "rocket_okapi")]
 use rocket_okapi::gen::OpenApiGenerator;
 #[cfg(feature = "rocket_okapi")]
-use rocket_okapi::okapi::openapi3::{Responses, SecurityRequirement, SecurityScheme};
+use rocket_okapi::okapi::openapi3::{
+    Object, Responses, SecurityRequirement, SecurityScheme, SecuritySchemeData,
+};
 #[cfg(feature = "rocket_okapi")]
 use rocket_okapi::okapi::Map;
 #[cfg(feature = "rocket_okapi")]
