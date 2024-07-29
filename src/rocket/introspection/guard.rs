@@ -1,5 +1,6 @@
 use custom_error::custom_error;
 use openidconnect::TokenIntrospectionResponse;
+use rocket::figment::Figment;
 use rocket::http::Status;
 use rocket::request::{FromRequest, Outcome};
 use rocket::{async_trait, Request};
@@ -16,6 +17,8 @@ use rocket_okapi::request::{OpenApiFromRequest, RequestHeaderInput};
 
 use crate::oidc::introspection::{introspect, IntrospectionError, ZitadelIntrospectionResponse};
 use crate::rocket::introspection::IntrospectionConfig;
+
+use super::config::IntrospectionRocketConfig;
 
 custom_error! {
     /// Error type for guard related errors.
@@ -159,14 +162,21 @@ impl<'a> OpenApiFromRequest<'a> for &'a IntrospectedUser {
         _name: String,
         _required: bool,
     ) -> rocket_okapi::Result<RequestHeaderInput> {
+        let figment: Figment = rocket::Config::figment();
+        let config: IntrospectionRocketConfig = figment
+            .extract()
+            .expect("authority must be set in Rocket.toml");
+
         // Setup global requirement for Security scheme
         let security_scheme = SecurityScheme {
             description: Some(
                 "Use OpenID Connect to authenticate. (does not work in RapiDoc at all)".to_owned(),
             ),
             data: SecuritySchemeData::OpenIdConnect {
-                open_id_connect_url: "https://auth.domain.com/.well-known/openid-configuration"
-                    .to_owned(),
+                open_id_connect_url: format!(
+                    "{}/.well-known/openid-configuration",
+                    config.authority
+                ),
             },
             extensions: Object::default(),
         };
