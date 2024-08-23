@@ -1,0 +1,32 @@
+[package]
+name = "zitadel-proto"
+description = " Protobuf generated files for Zitadel Apis"
+version = "0.0.0-development"
+edition = "2021"
+license = "MIT OR Apache-2.0"
+authors = ["Christoph Bühler <christoph@smartive.ch>"]
+repository = "https://github.com/buehler/zitadel-rust"
+keywords = ["ZITADEL", "gRPC"]
+categories = ["api-bindings"]
+include = [
+  "src/**/*.rs",
+  "Cargo.toml",
+  "LICENSE*",
+  "README.md",
+]
+
+[features]
+
+[dependencies]
+pbjson-types = { version = "0.6", optional = true }
+prost = { version = "0.12.4", optional = true }
+prost-types = { version = "0.12.4", optional = true }
+tonic = { version = "0.11", features = [
+  "tls",
+  "tls-roots",
+  "tls-roots-common",
+], optional = true }
+tonic-types = { version = "0.11", optional = true }
+
+[package.metadata.docs.rs]
+all-features = true
