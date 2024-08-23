@@ -16,11 +16,11 @@ include = [
 ]
 
 [dependencies]
-pbjson-types = { version = "0.6"}
-prost = { version = "0.12.4"}
-prost-types = { version = "0.12.4"}
-tonic = { version = "0.11" }
-tonic-types = { version = "0.11" }
+pbjson-types = { version = "0.7.0" }
+prost = { version = "0.13.1" }
+prost-types = { version = "0.13.1" }
+tonic = { version = "0.12.1" }
+tonic-types = { version = "0.12.1" }
 
 [package.metadata.docs.rs]
 all-features = true

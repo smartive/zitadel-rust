@@ -96,10 +96,9 @@ tokio = { version = "1.37.0", optional = true, features = [
   "macros",
   "rt-multi-thread",
 ] }
-tonic = { version = "0.11", features = [
+tonic = { version = "0.12.1", features = [
   "tls",
   "tls-roots",
-  "tls-roots-common",
 ], optional = true }
 
 zitadel-proto = { path = "../zitadel-proto", default-features = false, optional = true }
