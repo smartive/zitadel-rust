@@ -20,7 +20,7 @@ use crate::api::zitadel::system::v1::system_service_client::SystemServiceClient;
 use crate::api::zitadel::user::v2::user_service_client::UserServiceClient;
 use crate::credentials::{AuthenticationOptions, ServiceAccount};
 
-use super::zitadel::{
+use crate::api::zitadel::{
     admin::v1::admin_service_client::AdminServiceClient,
     auth::v1::auth_service_client::AuthServiceClient,
     management::v1::management_service_client::ManagementServiceClient,
