@@ -4,18 +4,18 @@ managed:
   enabled: true
 plugins:
   - plugin: prost
-    out: src/api
+    out: src
     opt:
       - compile_well_known_types
       - extern_path=.google.protobuf=::pbjson_types
   - plugin: tonic
-    out: src/api
+    out: src
     opt:
       - compile_well_known_types
       - extern_path=.google.protobuf=::pbjson_types
       - no_server
   - name: prost-crate
-    out: src/api
+    out: .
     strategy: all
     opt:
-      - no_features
+      - gen_crate
