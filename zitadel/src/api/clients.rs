@@ -12,12 +12,12 @@ use tonic::transport::{Channel, Endpoint};
 use tonic::{Request, Status};
 
 use crate::api::interceptors::{AccessTokenInterceptor, ServiceAccountInterceptor};
-use crate::api::zitadel::oidc::v2beta::oidc_service_client::OidcServiceClient;
-use crate::api::zitadel::org::v2beta::organization_service_client::OrganizationServiceClient;
-use crate::api::zitadel::session::v2beta::session_service_client::SessionServiceClient;
-use crate::api::zitadel::settings::v2beta::settings_service_client::SettingsServiceClient;
+use crate::api::zitadel::oidc::v2::oidc_service_client::OidcServiceClient;
+use crate::api::zitadel::org::v2::organization_service_client::OrganizationServiceClient;
+use crate::api::zitadel::session::v2::session_service_client::SessionServiceClient;
+use crate::api::zitadel::settings::v2::settings_service_client::SettingsServiceClient;
 use crate::api::zitadel::system::v1::system_service_client::SystemServiceClient;
-use crate::api::zitadel::user::v2beta::user_service_client::UserServiceClient;
+use crate::api::zitadel::user::v2::user_service_client::UserServiceClient;
 use crate::credentials::{AuthenticationOptions, ServiceAccount};
 
 use super::zitadel::{
