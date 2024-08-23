@@ -5,10 +5,8 @@
 //! Further contains interceptors that may be used to
 //! authenticate the clients to ZITADEL with credentials.
 
-pub use generated::zitadel;
+pub use zitadel_proto::zitadel;
 
 pub mod clients;
-#[allow(clippy::all)]
-mod generated;
 #[cfg(feature = "interceptors")]
 pub mod interceptors;
