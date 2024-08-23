@@ -1,4 +1,4 @@
-proto_dir := "./src/api/generated"
+proto_dir := "./src/api"
 
 default: clean generate-grpc
 
