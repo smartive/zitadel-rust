@@ -14,6 +14,7 @@ include = [
   "LICENSE*",
   "README.md",
 ]
+resolver = "2"
 
 [features]
 default = []
@@ -24,17 +25,25 @@ actix = ["credentials", "oidc", "dep:actix-web"]
 ## The API feature enables the gRPC service clients to access the ZITADEL API.
 api-common = [ "dep:tonic", "credentials", "interceptors" ]
 api = [
-  "api-common",
-  "zitadel-proto/zitadel-v1-v1",
-  "zitadel-proto/zitadel-auth-v1",
-  "zitadel-proto/zitadel-admin-v1",
-  "zitadel-proto/zitadel-system-v1",
-  "zitadel-proto/zitadel-user-v2",
-  "zitadel-proto/zitadel-oidc-v2",
-  "zitadel-proto/zitadel-org-v2",
-  "zitadel-proto/zitadel-session-v2",
-  "zitadel-proto/zitadel-settings-v2",
+  "api-admin-v1",
+  "api-auth-v1",
+  "api-management-v1",
+  "api-system-v1",
+  "api-oidc-v2",
+  "api-org-v2",
+  "api-session-v2",
+  "api-settings-v2",
+  "api-user-v2"
 ]
+api-admin-v1 = ["api-common", "zitadel-proto/zitadel-admin-v1" ]
+api-auth-v1 = ["api-common", "zitadel-proto/zitadel-auth-v1" ]
+api-management-v1 = ["api-common", "zitadel-proto/zitadel-v1-v1" ]
+api-system-v1 = ["api-common", "zitadel-proto/zitadel-system-v1", "zitadel-proto/zitadel-authn-v1" ]
+api-oidc-v2 = ["api-common", "zitadel-proto/zitadel-oidc-v2" ]
+api-org-v2 = ["api-common", "zitadel-proto/zitadel-org-v2", "zitadel-proto/zitadel-user-v2" ]
+api-session-v2 = ["api-common", "zitadel-proto/zitadel-session-v2" ]
+api-settings-v2 = ["api-common", "zitadel-proto/zitadel-settings-v2" ]
+api-user-v2 = ["api-common", "zitadel-proto/zitadel-user-v2" ]
 
 
 ## Feature that enables support for the [axum framework](https://docs.rs/axum/latest/axum/).
@@ -49,7 +58,7 @@ credentials = ["dep:jsonwebtoken", "dep:openidconnect", "dep:reqwest", "dep:serd
 ## new convenience functions to create a gRPC client with interceptors.
 ## The interceptors provide easy access to an authenticated ZITADEL API client.
 ## The interceptors work with the credentials from this crate.
-interceptors = ["api", "credentials", "dep:time", "dep:tokio"]
+interceptors = ["credentials", "dep:time", "dep:tokio"]
 
 ## This feature enables caching of the OIDC discovery and introspection results.
 ## By default, only the in-memory cache is available. To use a different cache,
@@ -93,7 +102,7 @@ tonic = { version = "0.11", features = [
   "tls-roots-common",
 ], optional = true }
 
-zitadel-proto = { path = "../zitadel-proto", default-features = false }
+zitadel-proto = { path = "../zitadel-proto", default-features = false, optional = true }
 
 [dev-dependencies]
 chrono = "0.4.38"
