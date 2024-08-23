@@ -22,7 +22,20 @@ default = []
 actix = ["credentials", "oidc", "dep:actix-web"]
 
 ## The API feature enables the gRPC service clients to access the ZITADEL API.
-api = [ "dep:tonic", "dep:zitadel-proto", "credentials", "interceptors" ]
+api-common = [ "dep:tonic", "credentials", "interceptors" ]
+api = [
+  "api-common",
+  "zitadel-proto/zitadel-v1-v1",
+  "zitadel-proto/zitadel-auth-v1",
+  "zitadel-proto/zitadel-admin-v1",
+  "zitadel-proto/zitadel-system-v1",
+  "zitadel-proto/zitadel-user-v2",
+  "zitadel-proto/zitadel-oidc-v2",
+  "zitadel-proto/zitadel-org-v2",
+  "zitadel-proto/zitadel-session-v2",
+  "zitadel-proto/zitadel-settings-v2",
+]
+
 
 ## Feature that enables support for the [axum framework](https://docs.rs/axum/latest/axum/).
 axum = ["credentials", "oidc", "dep:axum", "dep:axum-extra"]
@@ -80,7 +93,7 @@ tonic = { version = "0.11", features = [
   "tls-roots-common",
 ], optional = true }
 
-zitadel-proto = { path = "../zitadel-proto", features = ["proto_full"], optional = true }
+zitadel-proto = { path = "../zitadel-proto", default-features = false }
 
 [dev-dependencies]
 chrono = "0.4.38"
