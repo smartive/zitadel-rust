@@ -36,7 +36,7 @@ credentials = ["dep:jsonwebtoken", "dep:openidconnect", "dep:reqwest", "dep:serd
 ## new convenience functions to create a gRPC client with interceptors.
 ## The interceptors provide easy access to an authenticated ZITADEL API client.
 ## The interceptors work with the credentials from this crate.
-interceptors = ["api", "credentials", "dep:time", "dep:tokio"]
+interceptors = ["credentials", "dep:time", "dep:tokio"]
 
 ## This feature enables caching of the OIDC discovery and introspection results.
 ## By default, only the in-memory cache is available. To use a different cache,

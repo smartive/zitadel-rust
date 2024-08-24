@@ -11,6 +11,7 @@ use tonic::service::Interceptor;
 use tonic::transport::{Channel, Endpoint};
 use tonic::{Request, Status};
 
+#[cfg(feature = "interceptors")]
 use crate::api::interceptors::{AccessTokenInterceptor, ServiceAccountInterceptor};
 use crate::api::zitadel::oidc::v2beta::oidc_service_client::OidcServiceClient;
 use crate::api::zitadel::org::v2beta::organization_service_client::OrganizationServiceClient;
@@ -18,6 +19,7 @@ use crate::api::zitadel::session::v2beta::session_service_client::SessionService
 use crate::api::zitadel::settings::v2beta::settings_service_client::SettingsServiceClient;
 use crate::api::zitadel::system::v1::system_service_client::SystemServiceClient;
 use crate::api::zitadel::user::v2beta::user_service_client::UserServiceClient;
+#[cfg(feature = "interceptors")]
 use crate::credentials::{AuthenticationOptions, ServiceAccount};
 
 use super::zitadel::{
@@ -33,6 +35,7 @@ custom_error! {
         ConnectionError = "could not connect to provided endpoint",
 }
 
+#[cfg(feature = "interceptors")]
 enum AuthType {
     None,
     AccessToken(String),
@@ -56,6 +59,7 @@ impl ChainedInterceptor {
         }
     }
 
+    #[cfg(feature = "interceptors")]
     pub(crate) fn add_interceptor(mut self, interceptor: Box<dyn Interceptor + Send>) -> Self {
         self.interceptors.push(interceptor);
         self
@@ -77,6 +81,7 @@ impl Interceptor for ChainedInterceptor {
 /// an authentication method.
 pub struct ClientBuilder {
     api_endpoint: String,
+    #[cfg(feature = "interceptors")]
     auth_type: AuthType,
 }
 
@@ -85,6 +90,7 @@ impl ClientBuilder {
     pub fn new(api_endpoint: &str) -> Self {
         Self {
             api_endpoint: api_endpoint.to_string(),
+            #[cfg(feature = "interceptors")]
             auth_type: AuthType::None,
         }
     }
@@ -313,7 +319,9 @@ impl ClientBuilder {
     }
 
     fn get_chained_interceptor(&self) -> ChainedInterceptor {
+        #[allow(unused_mut)]
         let mut interceptor = ChainedInterceptor::new();
+        #[cfg(feature = "interceptors")]
         match &self.auth_type {
             AuthType::AccessToken(token) => {
                 interceptor =
