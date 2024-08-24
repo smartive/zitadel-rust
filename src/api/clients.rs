@@ -57,7 +57,6 @@ pub struct ClientBuilderWithInterceptor<T: Interceptor> {
     interceptor: T,
 }
 
-
 impl ClientBuilder {
     /// Create a new client builder with the the provided endpoint.
     pub fn new(api_endpoint: &str) -> ClientBuilder {
@@ -75,7 +74,10 @@ impl ClientBuilder {
     /// Clients with this authentication method will have the [`AccessTokenInterceptor`]
     /// attached.
     #[cfg(feature = "interceptors")]
-    pub fn with_access_token(self, access_token: &str) -> ClientBuilderWithInterceptor<AccessTokenInterceptor> {
+    pub fn with_access_token(
+        self,
+        access_token: &str,
+    ) -> ClientBuilderWithInterceptor<AccessTokenInterceptor> {
         ClientBuilderWithInterceptor {
             api_endpoint: self.api_endpoint,
             interceptor: AccessTokenInterceptor::new(access_token),
