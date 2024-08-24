@@ -15,8 +15,8 @@ plugins:
       - extern_path=.google.protobuf=::pbjson_types
       - no_server
   - name: prost-crate
-    out: src/api/generated
+    out: .
     strategy: all
     opt:
-      - no_features
-      - include_file=mod.rs
+      - gen_crate
+      - include_file=src/api/generated/mod.rs

@@ -37,7 +37,7 @@
 
 #[cfg(feature = "actix")]
 pub mod actix;
-#[cfg(feature = "api")]
+#[cfg(feature = "api-common")]
 pub mod api;
 #[cfg(feature = "axum")]
 pub mod axum;

@@ -13,20 +13,29 @@ use tonic::{Request, Status};
 
 #[cfg(feature = "interceptors")]
 use crate::api::interceptors::{AccessTokenInterceptor, ServiceAccountInterceptor};
-use crate::api::zitadel::oidc::v2beta::oidc_service_client::OidcServiceClient;
-use crate::api::zitadel::org::v2beta::organization_service_client::OrganizationServiceClient;
-use crate::api::zitadel::session::v2beta::session_service_client::SessionServiceClient;
-use crate::api::zitadel::settings::v2beta::settings_service_client::SettingsServiceClient;
+
+#[cfg(feature = "api-oidc-v2")]
+use crate::api::zitadel::oidc::v2::oidc_service_client::OidcServiceClient;
+#[cfg(feature = "api-org-v2")]
+use crate::api::zitadel::org::v2::organization_service_client::OrganizationServiceClient;
+#[cfg(feature = "api-session-v2")]
+use crate::api::zitadel::session::v2::session_service_client::SessionServiceClient;
+#[cfg(feature = "api-settings-v2")]
+use crate::api::zitadel::settings::v2::settings_service_client::SettingsServiceClient;
+#[cfg(feature = "api-user-v2")]
+use crate::api::zitadel::user::v2::user_service_client::UserServiceClient;
+
+#[cfg(feature = "api-admin-v1")]
+use crate::api::zitadel::admin::v1::admin_service_client::AdminServiceClient;
+#[cfg(feature = "api-auth-v1")]
+use crate::api::zitadel::auth::v1::auth_service_client::AuthServiceClient;
+#[cfg(feature = "api-management-v1")]
+use crate::api::zitadel::management::v1::management_service_client::ManagementServiceClient;
+#[cfg(feature = "api-system-v1")]
 use crate::api::zitadel::system::v1::system_service_client::SystemServiceClient;
-use crate::api::zitadel::user::v2beta::user_service_client::UserServiceClient;
+
 #[cfg(feature = "interceptors")]
 use crate::credentials::{AuthenticationOptions, ServiceAccount};
-
-use super::zitadel::{
-    admin::v1::admin_service_client::AdminServiceClient,
-    auth::v1::auth_service_client::AuthServiceClient,
-    management::v1::management_service_client::ManagementServiceClient,
-};
 
 custom_error! {
     /// Errors that may occur when creating a client.
@@ -133,6 +142,7 @@ impl ClientBuilder {
     /// This function returns a [`ClientError`] if the provided API endpoint
     /// cannot be parsed into a valid URL or if the connection to the endpoint
     /// is not possible.
+    #[cfg(feature = "api-admin-v1")]
     pub async fn build_admin_client(
         &self,
     ) -> Result<AdminServiceClient<InterceptedService<Channel, ChainedInterceptor>>, Box<dyn Error>>
@@ -154,6 +164,7 @@ impl ClientBuilder {
     /// This function returns a [`ClientError`] if the provided API endpoint
     /// cannot be parsed into a valid URL or if the connection to the endpoint
     /// is not possible.
+    #[cfg(feature = "api-auth-v1")]
     pub async fn build_auth_client(
         &self,
     ) -> Result<AuthServiceClient<InterceptedService<Channel, ChainedInterceptor>>, Box<dyn Error>>
@@ -175,6 +186,7 @@ impl ClientBuilder {
     /// This function returns a [`ClientError`] if the provided API endpoint
     /// cannot be parsed into a valid URL or if the connection to the endpoint
     /// is not possible.
+    #[cfg(feature = "api-management-v1")]
     pub async fn build_management_client(
         &self,
     ) -> Result<
@@ -198,6 +210,7 @@ impl ClientBuilder {
     /// This function returns a [`ClientError`] if the provided API endpoint
     /// cannot be parsed into a valid URL or if the connection to the endpoint
     /// is not possible.
+    #[cfg(feature = "api-oidc-v2")]
     pub async fn build_oidc_client(
         &self,
     ) -> Result<OidcServiceClient<InterceptedService<Channel, ChainedInterceptor>>, Box<dyn Error>>
@@ -219,6 +232,7 @@ impl ClientBuilder {
     /// This function returns a [`ClientError`] if the provided API endpoint
     /// cannot be parsed into a valid URL or if the connection to the endpoint
     /// is not possible.
+    #[cfg(feature = "api-org-v2")]
     pub async fn build_organization_client(
         &self,
     ) -> Result<
@@ -242,6 +256,7 @@ impl ClientBuilder {
     /// This function returns a [`ClientError`] if the provided API endpoint
     /// cannot be parsed into a valid URL or if the connection to the endpoint
     /// is not possible.
+    #[cfg(feature = "api-session-v2")]
     pub async fn build_session_client(
         &self,
     ) -> Result<SessionServiceClient<InterceptedService<Channel, ChainedInterceptor>>, Box<dyn Error>>
@@ -263,6 +278,7 @@ impl ClientBuilder {
     /// This function returns a [`ClientError`] if the provided API endpoint
     /// cannot be parsed into a valid URL or if the connection to the endpoint
     /// is not possible.
+    #[cfg(feature = "api-settings-v2")]
     pub async fn build_settings_client(
         &self,
     ) -> Result<
@@ -286,6 +302,7 @@ impl ClientBuilder {
     /// This function returns a [`ClientError`] if the provided API endpoint
     /// cannot be parsed into a valid URL or if the connection to the endpoint
     /// is not possible.
+    #[cfg(feature = "api-system-v1")]
     pub async fn build_system_client(
         &self,
     ) -> Result<SystemServiceClient<InterceptedService<Channel, ChainedInterceptor>>, Box<dyn Error>>
@@ -307,6 +324,7 @@ impl ClientBuilder {
     /// This function returns a [`ClientError`] if the provided API endpoint
     /// cannot be parsed into a valid URL or if the connection to the endpoint
     /// is not possible.
+    #[cfg(feature = "api-user-v2")]
     pub async fn build_user_client(
         &self,
     ) -> Result<UserServiceClient<InterceptedService<Channel, ChainedInterceptor>>, Box<dyn Error>>
