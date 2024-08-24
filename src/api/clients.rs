@@ -8,7 +8,7 @@ use std::error::Error;
 use custom_error::custom_error;
 use tonic::codegen::InterceptedService;
 use tonic::service::Interceptor;
-use tonic::transport::{Channel, Endpoint};
+use tonic::transport::{Channel, ClientTlsConfig, Endpoint};
 use tonic::{Request, Status};
 
 #[cfg(feature = "interceptors")]
@@ -42,6 +42,7 @@ custom_error! {
     pub ClientError
         InvalidUrl = "the provided url is invalid",
         ConnectionError = "could not connect to provided endpoint",
+        TlsInitializationError = "could not setup tls connection",
 }
 
 #[cfg(feature = "interceptors")]
@@ -363,6 +364,12 @@ impl ClientBuilder {
 async fn get_channel(api_endpoint: &str) -> Result<Channel, ClientError> {
     Endpoint::from_shared(api_endpoint.to_string())
         .map_err(|_| ClientError::InvalidUrl)?
+        .tls_config(
+            ClientTlsConfig::default()
+                .assume_http2(true)
+                .with_native_roots(),
+        )
+        .map_err(|_| ClientError::TlsInitializationError)?
         .connect()
         .await
         .map_err(|_| ClientError::ConnectionError)
