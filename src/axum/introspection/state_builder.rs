@@ -1,4 +1,5 @@
 use custom_error::custom_error;
+use std::sync::Arc;
 
 use crate::axum::introspection::state::IntrospectionConfig;
 use crate::credentials::Application;
@@ -67,11 +68,11 @@ impl IntrospectionStateBuilder {
         }
 
         Ok(IntrospectionState {
-            config: IntrospectionConfig {
+            config: Arc::new(IntrospectionConfig {
                 authority: self.authority.clone(),
                 introspection_uri: introspection_uri.unwrap(),
                 authentication: self.authentication.as_ref().unwrap().clone(),
-            },
+            }),
         })
     }
 }

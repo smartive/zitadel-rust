@@ -3,6 +3,7 @@ use std::collections::HashMap;
 use std::fmt::Debug;
 use std::hash::Hash;
 
+use crate::axum::introspection::IntrospectionState;
 use axum::http::StatusCode;
 use axum::{
     async_trait,
@@ -21,8 +22,6 @@ use serde::Serialize;
 use serde_json::json;
 
 use crate::oidc::introspection::{introspect, IntrospectionError, ZitadelIntrospectionResponse};
-
-use super::state::IntrospectionConfig;
 
 custom_error! {
     /// Error type for guard related errors.
@@ -80,7 +79,7 @@ pub struct IntrospectedUser<Role = String> {
 #[async_trait]
 impl<S, Role> FromRequestParts<S> for IntrospectedUser<Role>
 where
-    IntrospectionConfig: FromRef<S>,
+    IntrospectionState: FromRef<S>,
     S: Send + Sync,
     Role: Hash + Eq + Debug + Serialize + DeserializeOwned + Clone,
 {
@@ -92,7 +91,8 @@ where
             .await
             .map_err(|_| IntrospectionGuardError::InvalidHeader)?;
 
-        let config = IntrospectionConfig::from_ref(state);
+        let state = IntrospectionState::from_ref(state);
+        let config = &state.config;
 
         let res = introspect::<Role>(
             &config.introspection_uri,

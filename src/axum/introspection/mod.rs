@@ -1,11 +1,12 @@
-//! The intropection module allows you to use the OAuth 2.0 Token Introspection flow to authenticate users against ZITADEL.
+//! The introspection module allows you to use the OAuth 2.0 Token Introspection flow to authenticate users against ZITADEL.
 //!
-//! Axum uses "extracters" and "middlewares" to intercept calls. To authenticate a user against ZITADEL, you can use the [IntrospectedUser].
+//! Axum uses "extractors" and "middlewares" to intercept calls. To authenticate a user against ZITADEL, you can use the [IntrospectedUser].
 //! Which enables an extractor workflow: [extractor](https://docs.rs/axum/latest/axum/extract/index.html)
 //!
 //! #### Configure Axum
 //!
 //! To use the introspection flow, you need to configure the [IntrospectionState] and add it to your [Router](https://docs.rs/axum/latest/axum/routing/struct.Router.html).
+//! When a custom state is used, [FromRef](axum::extract::FromRef) must be implemented. See [IntrospectionState] for more Details.
 //!
 //! ```no_run
 //! #
@@ -60,6 +61,6 @@ mod state;
 mod state_builder;
 mod user;
 
-pub use state::{IntrospectionConfig, IntrospectionState};
+pub use state::IntrospectionState;
 pub use state_builder::{IntrospectionStateBuilder, IntrospectionStateBuilderError};
 pub use user::{IntrospectedUser, IntrospectionGuardError};
