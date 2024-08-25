@@ -1,7 +1,5 @@
-use std::cmp::Eq;
 use std::collections::HashMap;
 use std::fmt::Debug;
-use std::hash::Hash;
 
 use crate::axum::introspection::IntrospectionState;
 use axum::http::StatusCode;
@@ -17,8 +15,6 @@ use axum_extra::headers::Authorization;
 use axum_extra::TypedHeader;
 use custom_error::custom_error;
 use openidconnect::TokenIntrospectionResponse;
-use serde::de::DeserializeOwned;
-use serde::Serialize;
 use serde_json::json;
 
 use crate::oidc::introspection::{introspect, IntrospectionError, ZitadelIntrospectionResponse};
@@ -62,7 +58,7 @@ impl IntoResponse for IntrospectionGuardError {
 /// Struct for the extracted user. The extracted user will always be valid, when fetched in a
 /// request function arguments. If not the api will return with an appropriate error.
 #[derive(Debug)]
-pub struct IntrospectedUser<Role = String> {
+pub struct IntrospectedUser {
     /// UserID of the introspected user (OIDC Field "sub").
     pub user_id: String,
     pub username: Option<String>,
@@ -73,15 +69,14 @@ pub struct IntrospectedUser<Role = String> {
     pub email: Option<String>,
     pub email_verified: Option<bool>,
     pub locale: Option<String>,
-    pub project_roles: Option<HashMap<Role, HashMap<String, String>>>,
+    pub project_roles: Option<HashMap<String, HashMap<String, String>>>,
 }
 
 #[async_trait]
-impl<S, Role> FromRequestParts<S> for IntrospectedUser<Role>
+impl<S> FromRequestParts<S> for IntrospectedUser
 where
     IntrospectionState: FromRef<S>,
     S: Send + Sync,
-    Role: Hash + Eq + Debug + Serialize + DeserializeOwned + Clone,
 {
     type Rejection = IntrospectionGuardError;
 
@@ -94,7 +89,7 @@ where
         let state = IntrospectionState::from_ref(state);
         let config = &state.config;
 
-        let res = introspect::<Role>(
+        let res = introspect(
             &config.introspection_uri,
             &config.authority,
             &config.authentication,
@@ -102,7 +97,7 @@ where
         )
         .await;
 
-        let user: Result<IntrospectedUser<Role>, IntrospectionGuardError> = match res {
+        let user: Result<IntrospectedUser, IntrospectionGuardError> = match res {
             Ok(res) => match res.active() {
                 true if res.sub().is_some() => Ok(res.into()),
                 false => Err(IntrospectionGuardError::Inactive),
@@ -115,12 +110,8 @@ where
     }
 }
 
-impl<Role: Hash + Eq + Debug + Serialize + DeserializeOwned + Clone>
-    From<ZitadelIntrospectionResponse<Role>> for IntrospectedUser<Role>
-where
-    Role: Hash,
-{
-    fn from(response: ZitadelIntrospectionResponse<Role>) -> Self {
+impl From<ZitadelIntrospectionResponse> for IntrospectedUser {
+    fn from(response: ZitadelIntrospectionResponse) -> Self {
         Self {
             user_id: response.sub().unwrap().to_string(),
             username: response.username().map(|s| s.to_string()),

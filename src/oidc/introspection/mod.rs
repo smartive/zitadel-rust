@@ -7,12 +7,9 @@ use openidconnect::{
 };
 
 use reqwest::header::{HeaderMap, ACCEPT, AUTHORIZATION, CONTENT_TYPE};
-use serde::de::DeserializeOwned;
 use serde::{Deserialize, Serialize};
-use std::cmp::Eq;
 use std::collections::HashMap;
 use std::fmt::Debug;
-use std::hash::Hash;
 
 use crate::credentials::{Application, ApplicationError};
 
@@ -40,10 +37,7 @@ custom_error! {
 /// - When scope contains `urn:zitadel:iam:user:metadata`, the metadata hashmap will be
 ///   filled with the user metadata.
 #[derive(Clone, Debug, Serialize, Deserialize, Default)]
-pub struct ZitadelIntrospectionExtraTokenFields<Role = String>
-where
-    Role: Hash + Eq + Clone,
-{
+pub struct ZitadelIntrospectionExtraTokenFields {
     pub name: Option<String>,
     pub given_name: Option<String>,
     pub family_name: Option<String>,
@@ -58,19 +52,16 @@ where
     #[serde(rename = "urn:zitadel:iam:user:resourceowner:primary_domain")]
     pub resource_owner_primary_domain: Option<String>,
     #[serde(rename = "urn:zitadel:iam:org:project:roles")]
-    pub project_roles: Option<HashMap<Role, HashMap<String, String>>>,
+    pub project_roles: Option<HashMap<String, HashMap<String, String>>>,
     #[serde(rename = "urn:zitadel:iam:user:metadata")]
     pub metadata: Option<HashMap<String, String>>,
 }
 
-impl<Role: Debug + Hash + Eq + DeserializeOwned + Serialize + Clone> ExtraTokenFields
-    for ZitadelIntrospectionExtraTokenFields<Role>
-{
-}
+impl ExtraTokenFields for ZitadelIntrospectionExtraTokenFields {}
 
 /// Type alias for the ZITADEL introspection response.
-pub type ZitadelIntrospectionResponse<Role = String> =
-    StandardTokenIntrospectionResponse<ZitadelIntrospectionExtraTokenFields<Role>, CoreTokenType>;
+pub type ZitadelIntrospectionResponse =
+    StandardTokenIntrospectionResponse<ZitadelIntrospectionExtraTokenFields, CoreTokenType>;
 
 /// Definition of the authentication scheme against the authority (or issuer). This authentication
 /// is required when performing actions like introspection against any ZITADEL instance.
@@ -175,7 +166,7 @@ fn payload(
 /// let token = "dEnGhIFs3VnqcQU5D2zRSeiarB1nwH6goIKY0J8MWZbsnWcTuu1C59lW9DgCq1y096GYdXA";
 /// let metadata = discover(authority).await?;
 ///
-/// let result = introspect::<String>(
+/// let result = introspect(
 ///     metadata.additional_metadata().introspection_endpoint.as_ref().unwrap(),
 ///     authority,
 ///     &auth,
@@ -186,12 +177,12 @@ fn payload(
 /// # Ok(())
 /// # }
 /// ```
-pub async fn introspect<Role: Hash + Debug + Eq + DeserializeOwned + Serialize + Clone>(
+pub async fn introspect(
     introspection_uri: &str,
     authority: &str,
     authentication: &AuthorityAuthentication,
     token: &str,
-) -> Result<ZitadelIntrospectionResponse<Role>, IntrospectionError> {
+) -> Result<ZitadelIntrospectionResponse, IntrospectionError> {
     let response = async_http_client(HttpRequest {
         url: Url::parse(introspection_uri)
             .map_err(|source| IntrospectionError::ParseUrl { source })?,
@@ -202,19 +193,17 @@ pub async fn introspect<Role: Hash + Debug + Eq + DeserializeOwned + Serialize +
     .await
     .map_err(|source| IntrospectionError::RequestFailed { source })?;
 
-    let mut response: ZitadelIntrospectionResponse<Role> =
+    let mut response: ZitadelIntrospectionResponse =
         serde_json::from_slice(response.body.as_slice())
             .map_err(|source| IntrospectionError::ParseResponse { source })?;
-    decode_metadata::<Role>(&mut response)?;
+    decode_metadata(&mut response)?;
     Ok(response)
 }
 
 // Metadata values are base64 encoded.
-fn decode_metadata<Role: Hash + Debug + Eq + DeserializeOwned + Serialize + Clone>(
-    response: &mut ZitadelIntrospectionResponse<Role>,
-) -> Result<(), IntrospectionError> {
+fn decode_metadata(response: &mut ZitadelIntrospectionResponse) -> Result<(), IntrospectionError> {
     if let Some(h) = &response.extra_fields().metadata {
-        let mut extra: ZitadelIntrospectionExtraTokenFields<Role> = response.extra_fields().clone();
+        let mut extra: ZitadelIntrospectionExtraTokenFields = response.extra_fields().clone();
         let mut metadata = HashMap::new();
         for (k, v) in h {
             let decoded_v = base64::decode(v)
@@ -243,7 +232,7 @@ mod tests {
 
     #[tokio::test]
     async fn introspect_fails_with_invalid_url() {
-        let result = introspect::<String>(
+        let result = introspect(
             "foobar",
             "foobar",
             &AuthorityAuthentication::Basic {
@@ -264,7 +253,7 @@ mod tests {
     #[tokio::test]
     async fn introspect_fails_with_invalid_endpoint() {
         let meta = discover(ZITADEL_URL).await.unwrap();
-        let result = introspect::<String>(
+        let result = introspect(
             &meta.token_endpoint().unwrap().to_string(),
             ZITADEL_URL,
             &AuthorityAuthentication::Basic {
@@ -281,7 +270,7 @@ mod tests {
     #[tokio::test]
     async fn introspect_succeeds() {
         let meta = discover(ZITADEL_URL).await.unwrap();
-        let result = introspect::<String>(
+        let result = introspect(
             &meta
                 .additional_metadata()
                 .introspection_endpoint
