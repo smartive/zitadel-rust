@@ -6,6 +6,9 @@ use crate::credentials::Application;
 use crate::oidc::discovery::{discover, DiscoveryError};
 use crate::oidc::introspection::AuthorityAuthentication;
 
+#[cfg(feature = "introspection_cache")]
+use crate::oidc::introspection::cache::IntrospectionCache;
+
 use super::state::IntrospectionState;
 
 custom_error! {
@@ -19,6 +22,8 @@ custom_error! {
 pub struct IntrospectionStateBuilder {
     authority: String,
     authentication: Option<AuthorityAuthentication>,
+    #[cfg(feature = "introspection_cache")]
+    cache: Option<Box<dyn IntrospectionCache>>,
 }
 
 /// Builder for [IntrospectionConfig]
@@ -27,6 +32,8 @@ impl IntrospectionStateBuilder {
         Self {
             authority: authority.to_string(),
             authentication: None,
+            #[cfg(feature = "introspection_cache")]
+            cache: None,
         }
     }
 
@@ -45,6 +52,17 @@ impl IntrospectionStateBuilder {
 
     pub fn with_jwt_profile(&mut self, application: Application) -> &mut IntrospectionStateBuilder {
         self.authentication = Some(AuthorityAuthentication::JWTProfile { application });
+
+        self
+    }
+
+    /// Set the [IntrospectionCache] to use for caching introspection responses.
+    #[cfg(feature = "introspection_cache")]
+    pub fn with_introspection_cache(
+        &mut self,
+        cache: impl IntrospectionCache + 'static,
+    ) -> &mut IntrospectionStateBuilder {
+        self.cache = Some(Box::new(cache));
 
         self
     }
@@ -72,6 +90,8 @@ impl IntrospectionStateBuilder {
                 authority: self.authority.clone(),
                 introspection_uri: introspection_uri.unwrap(),
                 authentication: self.authentication.as_ref().unwrap().clone(),
+                #[cfg(feature = "introspection_cache")]
+                cache: self.cache.take(),
             }),
         })
     }

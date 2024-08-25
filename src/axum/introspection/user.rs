@@ -89,6 +89,38 @@ where
         let state = IntrospectionState::from_ref(state);
         let config = &state.config;
 
+        #[cfg(feature = "introspection_cache")]
+        let res = {
+            match state.config.cache.as_deref() {
+                None => {
+                    introspect(
+                        &config.introspection_uri,
+                        &config.authority,
+                        &config.authentication,
+                        bearer.token(),
+                    )
+                    .await
+                }
+                Some(cache) => match cache.get(bearer.token()).await {
+                    Some(cached_response) => Ok(cached_response),
+                    None => {
+                        let res = introspect(
+                            &config.introspection_uri,
+                            &config.authority,
+                            &config.authentication,
+                            bearer.token(),
+                        )
+                        .await;
+                        if let Ok(res) = &res {
+                            cache.set(bearer.token(), res.clone()).await;
+                        }
+                        res
+                    }
+                },
+            }
+        };
+
+        #[cfg(not(feature = "introspection_cache"))]
         let res = introspect(
             &config.introspection_uri,
             &config.authority,
@@ -131,14 +163,12 @@ impl From<ZitadelIntrospectionResponse> for IntrospectedUser {
 mod tests {
     #![allow(clippy::all)]
 
-    use std::thread;
-
     use axum::body::Body;
     use axum::http::Request;
     use axum::response::IntoResponse;
     use axum::routing::get;
     use axum::Router;
-    use tokio::runtime::Builder;
+
     use tower::ServiceExt;
 
     use crate::axum::introspection::{IntrospectionState, IntrospectionStateBuilder};
@@ -169,33 +199,39 @@ mod tests {
         "Hello unauthorized"
     }
 
-    fn get_config() -> IntrospectionState {
-        let config = thread::spawn(move || {
-            let rt = Builder::new_multi_thread().enable_all().build().unwrap();
-            rt.block_on(async {
-                IntrospectionStateBuilder::new(ZITADEL_URL)
-                    .with_jwt_profile(Application::load_from_json(APPLICATION).unwrap())
-                    .build()
-                    .await
-                    .unwrap()
-            })
-        });
-
-        config.join().unwrap()
+    #[derive(Clone)]
+    struct SomeUserState {
+        introspection_state: IntrospectionState,
     }
 
-    fn app() -> Router {
+    impl FromRef<SomeUserState> for IntrospectionState {
+        fn from_ref(input: &SomeUserState) -> Self {
+            input.introspection_state.clone()
+        }
+    }
+
+    async fn app() -> Router {
+        let introspection_state = IntrospectionStateBuilder::new(ZITADEL_URL)
+            .with_jwt_profile(Application::load_from_json(APPLICATION).unwrap())
+            .build()
+            .await
+            .unwrap();
+
+        let state = SomeUserState {
+            introspection_state,
+        };
+
         let app = Router::new()
             .route("/unauthed", get(unauthed))
             .route("/authed", get(authed))
-            .with_state(get_config());
+            .with_state(state);
 
         return app;
     }
 
     #[tokio::test]
     async fn can_guard() {
-        let app = app();
+        let app = app().await;
 
         let resp = app
             .oneshot(
@@ -212,7 +248,7 @@ mod tests {
 
     #[tokio::test]
     async fn guard_protects_if_non_bearer_present() {
-        let app = app();
+        let app = app().await;
 
         let resp = app
             .oneshot(
@@ -230,7 +266,7 @@ mod tests {
 
     #[tokio::test]
     async fn guard_protects_if_multiple_auth_headers_present() {
-        let app = app();
+        let app = app().await;
 
         let resp = app
             .oneshot(
@@ -249,7 +285,7 @@ mod tests {
 
     #[tokio::test]
     async fn guard_protects_if_invalid_token() {
-        let app = app();
+        let app = app().await;
 
         let resp = app
             .oneshot(
@@ -267,7 +303,7 @@ mod tests {
 
     #[tokio::test]
     async fn guard_allows_valid_token() {
-        let app = app();
+        let app = app().await;
 
         let resp = app
             .oneshot(
@@ -281,5 +317,106 @@ mod tests {
             .unwrap();
 
         assert_eq!(resp.status(), StatusCode::OK);
+    }
+
+    #[cfg(feature = "introspection_cache")]
+    mod introspection_cache {
+        use super::*;
+        use crate::oidc::introspection::cache::in_memory::InMemoryIntrospectionCache;
+        use crate::oidc::introspection::cache::IntrospectionCache;
+        use crate::oidc::introspection::ZitadelIntrospectionExtraTokenFields;
+        use chrono::{TimeDelta, Utc};
+        use http_body_util::BodyExt;
+        use std::ops::Add;
+        use std::sync::Arc;
+
+        async fn app_witch_cache(cache: impl IntrospectionCache + 'static) -> Router {
+            let introspection_state = IntrospectionStateBuilder::new(ZITADEL_URL)
+                .with_jwt_profile(Application::load_from_json(APPLICATION).unwrap())
+                .with_introspection_cache(cache)
+                .build()
+                .await
+                .unwrap();
+
+            let state = SomeUserState {
+                introspection_state,
+            };
+
+            let app = Router::new()
+                .route("/unauthed", get(unauthed))
+                .route("/authed", get(authed))
+                .with_state(state);
+
+            return app;
+        }
+
+        #[tokio::test]
+        async fn guard_uses_cached_response() {
+            let cache = Arc::new(InMemoryIntrospectionCache::default());
+            let app = app_witch_cache(cache.clone()).await;
+
+            let mut res = ZitadelIntrospectionResponse::new(
+                true,
+                ZitadelIntrospectionExtraTokenFields::default(),
+            );
+            res.set_sub(Some("cached_sub".to_string()));
+            res.set_exp(Some(Utc::now().add(TimeDelta::days(1))));
+            cache.set(PERSONAL_ACCESS_TOKEN, res).await;
+
+            let response = app
+                .oneshot(
+                    Request::builder()
+                        .uri("/authed")
+                        .header("authorization", format!("Bearer {PERSONAL_ACCESS_TOKEN}"))
+                        .body(Body::empty())
+                        .unwrap(),
+                )
+                .await
+                .unwrap();
+
+            let text = String::from_utf8(
+                response
+                    .into_body()
+                    .collect()
+                    .await
+                    .unwrap()
+                    .to_bytes()
+                    .to_vec(),
+            )
+            .unwrap();
+            assert!(text.contains("cached_sub"));
+        }
+
+        #[tokio::test]
+        async fn guard_caches_response() {
+            let cache = Arc::new(InMemoryIntrospectionCache::default());
+            let app = app_witch_cache(cache.clone()).await;
+
+            let response = app
+                .oneshot(
+                    Request::builder()
+                        .uri("/authed")
+                        .header("authorization", format!("Bearer {PERSONAL_ACCESS_TOKEN}"))
+                        .body(Body::empty())
+                        .unwrap(),
+                )
+                .await
+                .unwrap();
+
+            let text = String::from_utf8(
+                response
+                    .into_body()
+                    .collect()
+                    .await
+                    .unwrap()
+                    .to_bytes()
+                    .to_vec(),
+            )
+            .unwrap();
+
+            let cached_response = cache.get(PERSONAL_ACCESS_TOKEN).await.unwrap();
+
+            assert!(text.contains(cached_response.sub().unwrap()));
+        }
     }
 }

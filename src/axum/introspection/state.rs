@@ -1,6 +1,8 @@
 use openidconnect::IntrospectionUrl;
 use std::sync::Arc;
 
+#[cfg(feature = "introspection_cache")]
+use crate::oidc::introspection::cache::IntrospectionCache;
 use crate::oidc::introspection::AuthorityAuthentication;
 
 /// State which must be present for extractor to work,
@@ -32,4 +34,6 @@ pub(crate) struct IntrospectionConfig {
     pub(crate) authority: String,
     pub(crate) authentication: AuthorityAuthentication,
     pub(crate) introspection_uri: IntrospectionUrl,
+    #[cfg(feature = "introspection_cache")]
+    pub(crate) cache: Option<Box<dyn IntrospectionCache>>,
 }
