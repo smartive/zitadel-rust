@@ -57,6 +57,44 @@ impl IntoResponse for IntrospectionGuardError {
 
 /// Struct for the extracted user. The extracted user will always be valid, when fetched in a
 /// request function arguments. If not the api will return with an appropriate error.
+///
+/// It can be used as a basis for further customized authorization checks with a custom extractor
+/// or an extension trait.
+///
+/// ```
+/// use axum::http::StatusCode;
+/// use axum::response::IntoResponse;
+/// use zitadel::axum::introspection::IntrospectedUser;
+///
+/// enum Role {
+///   Admin,
+///   Client
+/// }
+///
+/// async fn my_handler(user: IntrospectedUser) -> impl IntoResponse {
+///     if !user.has_role(Role::Admin, "MY-ORG-ID") {
+///        return StatusCode::FORBIDDEN.into_response();
+///     }
+///     "Hello Admin".into_response()
+/// }
+///
+/// trait MyAuthorizationChecks {
+///     fn has_role(&self, role: Role, org_id: &str) -> bool;
+/// }
+///
+/// impl MyAuthorizationChecks for IntrospectedUser {
+///     fn has_role(&self, role: Role, org_id: &str) -> bool {
+///         let role = match role {
+///             Role::Admin => "Admin",
+///             Role::Client => "Client",
+///         };
+///         self.project_roles.as_ref()
+///             .and_then(|roles| roles.get(role))
+///             .map(|org_ids| org_ids.contains_key(org_id))
+///             .unwrap_or(false)
+///     }
+/// }
+/// ```
 #[derive(Debug)]
 pub struct IntrospectedUser {
     /// UserID of the introspected user (OIDC Field "sub").
