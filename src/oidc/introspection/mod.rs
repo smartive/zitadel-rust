@@ -36,7 +36,7 @@ custom_error! {
 /// by default and [additional claims](https://zitadel.com/docs/apis/openidoauth/claims)
 /// if requested by scope:
 /// - When scope contains `urn:zitadel:iam:user:resourceowner`, the fields prefixed with
-///  `resource_owner_` are set.
+///   `resource_owner_` are set.
 /// - When scope contains `urn:zitadel:iam:user:metadata`, the metadata hashmap will be
 ///   filled with the user metadata.
 #[derive(Clone, Debug, Serialize, Deserialize, Default)]
