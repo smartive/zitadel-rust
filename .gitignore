@@ -2,3 +2,4 @@
 Cargo.lock
 temp*
 src/api/generated
+.idea
