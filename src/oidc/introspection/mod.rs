@@ -36,6 +36,34 @@ custom_error! {
 ///   `resource_owner_` are set.
 /// - When scope contains `urn:zitadel:iam:user:metadata`, the metadata hashmap will be
 ///   filled with the user metadata.
+///
+/// It can be used as a basis for further customized authorization checks, for example:
+/// ```
+/// use zitadel::axum::introspection::IntrospectedUser;
+/// use zitadel::oidc::introspection::ZitadelIntrospectionExtraTokenFields;
+///
+/// enum Role {
+///   Admin,
+///   Client
+/// }
+///
+/// trait MyAuthorizationChecks {
+///     fn has_role(&self, role: Role, org_id: &str) -> bool;
+/// }
+///
+/// impl MyAuthorizationChecks for ZitadelIntrospectionExtraTokenFields {
+///     fn has_role(&self, role: Role, org_id: &str) -> bool {
+///         let role = match role {
+///             Role::Admin => "Admin",
+///             Role::Client => "Client",
+///         };
+///         self.project_roles.as_ref()
+///             .and_then(|roles| roles.get(role))
+///             .map(|org_ids| org_ids.contains_key(org_id))
+///             .unwrap_or(false)
+///     }
+/// }
+/// ```
 #[derive(Clone, Debug, Serialize, Deserialize, Default)]
 pub struct ZitadelIntrospectionExtraTokenFields {
     pub name: Option<String>,
