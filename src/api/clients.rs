@@ -85,6 +85,17 @@ impl ClientBuilder<NoInterceptor> {
         }
     }
 
+    /// Configure the client builder to inject a custom interceptor,
+    /// which can be used to modify the [Request][tonic::request::Request] before being sent.
+    ///
+    /// See [Interceptor][tonic::service::Interceptor] for more details.
+    pub fn with_interceptor<I: Interceptor>(self, interceptor: I) -> ClientBuilder<I> {
+        ClientBuilder {
+            api_endpoint: self.api_endpoint,
+            interceptor
+        }
+    }
+
     /// Configure the client builder to use a provided access token.
     /// This can be a pre-fetched token from ZITADEL or some other form
     /// of a valid access token like a personal access token (PAT).
@@ -93,10 +104,7 @@ impl ClientBuilder<NoInterceptor> {
     /// attached.
     #[cfg(feature = "interceptors")]
     pub fn with_access_token(self, access_token: &str) -> ClientBuilder<AccessTokenInterceptor> {
-        ClientBuilder {
-            api_endpoint: self.api_endpoint,
-            interceptor: AccessTokenInterceptor::new(access_token),
-        }
+        self.with_interceptor(AccessTokenInterceptor::new(access_token))
     }
 
     /// Configure the client builder to use a [`ServiceAccount`][crate::credentials::ServiceAccount].
@@ -116,10 +124,7 @@ impl ClientBuilder<NoInterceptor> {
             service_account,
             auth_options.clone(),
         );
-        ClientBuilder {
-            api_endpoint: self.api_endpoint,
-            interceptor,
-        }
+        self.with_interceptor(interceptor)
     }
 }
 
