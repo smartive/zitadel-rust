@@ -1,6 +1,8 @@
 use openidconnect::IntrospectionUrl;
 
-use crate::oidc::introspection::{cache::IntrospectionCache, AuthorityAuthentication};
+#[cfg(feature = "introspection_cache")]
+use crate::oidc::introspection::cache::IntrospectionCache;
+use crate::oidc::introspection::AuthorityAuthentication;
 
 /// Configuration that must be injected into
 /// [the managed global state](https://rocket.rs/v0.5-rc/guide/state/#managed-state) of the

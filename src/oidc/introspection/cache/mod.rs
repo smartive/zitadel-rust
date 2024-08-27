@@ -3,6 +3,10 @@
 //! ZITADEL server. Depending on the enabled features, the cache can be persisted
 //! or only be kept in memory.
 
+use async_trait::async_trait;
+use std::fmt::Debug;
+use std::ops::Deref;
+
 pub mod in_memory;
 
 type Response = super::ZitadelIntrospectionResponse;
@@ -17,7 +21,7 @@ type Response = super::ZitadelIntrospectionResponse;
 /// ZITADEL will always set the `exp` field, if the token is "active".
 ///
 /// Non-active tokens SHOULD not be cached.
-#[async_trait::async_trait]
+#[async_trait]
 pub trait IntrospectionCache: Send + Sync + std::fmt::Debug {
     /// Retrieves the cached introspection result for the given token, if it exists.
     async fn get(&self, token: &str) -> Option<Response>;
@@ -28,4 +32,23 @@ pub trait IntrospectionCache: Send + Sync + std::fmt::Debug {
 
     /// Clears the cache.
     async fn clear(&self);
+}
+
+#[async_trait]
+impl<T, V> IntrospectionCache for T
+where
+    T: Deref<Target = V> + Send + Sync + Debug,
+    V: IntrospectionCache,
+{
+    async fn get(&self, token: &str) -> Option<Response> {
+        self.deref().get(token).await
+    }
+
+    async fn set(&self, token: &str, response: Response) {
+        self.deref().set(token, response).await
+    }
+
+    async fn clear(&self) {
+        self.deref().clear().await
+    }
 }

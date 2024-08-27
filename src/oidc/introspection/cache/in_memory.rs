@@ -1,4 +1,5 @@
-use std::{collections::HashMap, sync::Mutex};
+pub use moka::future::{Cache, CacheBuilder};
+use std::time::Duration;
 
 use openidconnect::TokenIntrospectionResponse;
 
@@ -6,14 +7,40 @@ type Response = super::super::ZitadelIntrospectionResponse;
 
 #[derive(Debug)]
 pub struct InMemoryIntrospectionCache {
-    cache: Mutex<HashMap<String, (Response, i64)>>,
+    cache: Cache<String, (Response, i64)>,
 }
 
 impl InMemoryIntrospectionCache {
+    /// Creates a new in memory cache, with setting a default `max_capacity` of `10_000` entries.
+    /// and a TTL expiry of 15 minutes, which is much smaller than the default access token lifetime
+    /// in Zitadel.
+    /// A small cache expiry is desired to detect revoked tokens and changes in role assignments
+    /// outside the token lifetime.
+    ///
+    /// For more fine-grained control use [new_from_cache].
     pub fn new() -> Self {
         Self {
-            cache: Mutex::new(HashMap::new()),
+            cache: CacheBuilder::new(10_000)
+                .time_to_live(Duration::from_secs(15 * 60))
+                .build(),
         }
+    }
+
+    /// Create a new in memory cache from a preconfigured Moka cache.
+    /// Use the re-exposed CacheBuilder to set custom configuration values.
+    ///
+    /// ```
+    /// use std::time::Duration;
+    /// use zitadel::oidc::introspection::cache::in_memory::InMemoryIntrospectionCache;
+    /// use zitadel::oidc::introspection::cache::in_memory::CacheBuilder;
+    /// let cache = InMemoryIntrospectionCache::new_from_cache(
+    ///                 CacheBuilder::new(10_000)
+    ///                     // use short lifetime to make sure token invalidation can be detected
+    ///                     .time_to_live(Duration::from_secs(60*15))
+    ///                     .build()
+    ///             );
+    pub fn new_from_cache(cache: Cache<String, (Response, i64)>) -> Self {
+        Self { cache }
     }
 }
 
@@ -26,16 +53,14 @@ impl Default for InMemoryIntrospectionCache {
 #[async_trait::async_trait]
 impl super::IntrospectionCache for InMemoryIntrospectionCache {
     async fn get(&self, token: &str) -> Option<Response> {
-        let mut cache = self.cache.lock().unwrap();
-
-        match cache.get(token) {
+        match self.cache.get(token).await {
             Some((_, expires_at))
-                if expires_at < &time::OffsetDateTime::now_utc().unix_timestamp() =>
+                if expires_at < time::OffsetDateTime::now_utc().unix_timestamp() =>
             {
-                cache.remove(token);
+                self.cache.invalidate(token).await;
                 None
             }
-            Some((response, _)) => Some(response.clone()),
+            Some((response, _)) => Some(response),
             None => None,
         }
     }
@@ -44,15 +69,14 @@ impl super::IntrospectionCache for InMemoryIntrospectionCache {
         if !response.active() || response.exp().is_none() {
             return;
         }
-
-        let mut cache = self.cache.lock().unwrap();
         let expires_at = response.exp().unwrap().timestamp();
-        cache.insert(token.to_string(), (response, expires_at));
+        self.cache
+            .insert(token.to_string(), (response, expires_at))
+            .await;
     }
 
     async fn clear(&self) {
-        let mut cache = self.cache.lock().unwrap();
-        cache.clear();
+        self.cache.invalidate_all();
     }
 }
 
@@ -76,8 +100,6 @@ mod tests {
         t.set("token1", response.clone()).await;
         t.set("token2", response.clone()).await;
 
-        assert_eq!(c.cache.lock().unwrap().len(), 2);
-
         assert!(t.get("token1").await.is_some());
         assert!(t.get("token2").await.is_some());
         assert!(t.get("token3").await.is_none());
@@ -93,7 +115,8 @@ mod tests {
         t.set("token1", response.clone()).await;
         t.set("token2", response.clone()).await;
 
-        assert_eq!(c.cache.lock().unwrap().len(), 0);
+        assert!(t.get("token1").await.is_none());
+        assert!(t.get("token2").await.is_none());
     }
 
     #[tokio::test]
@@ -107,11 +130,10 @@ mod tests {
         t.set("token1", response.clone()).await;
         t.set("token2", response.clone()).await;
 
-        assert_eq!(c.cache.lock().unwrap().len(), 2);
-
         t.clear().await;
 
-        assert_eq!(c.cache.lock().unwrap().len(), 0);
+        assert!(t.get("token1").await.is_none());
+        assert!(t.get("token2").await.is_none());
     }
 
     #[tokio::test]
@@ -125,11 +147,10 @@ mod tests {
         t.set("token1", response.clone()).await;
         t.set("token2", response.clone()).await;
 
-        assert_eq!(c.cache.lock().unwrap().len(), 2);
-
         let _ = t.get("token1").await;
         let _ = t.get("token2").await;
 
-        assert_eq!(c.cache.lock().unwrap().len(), 0);
+        assert!(t.get("token1").await.is_none());
+        assert!(t.get("token2").await.is_none());
     }
 }
