@@ -24,7 +24,8 @@
           {
             "path": "target/package/*.crate"
           }
-        ]
+        ],
+        "successComment": false
       }
     ]
   ]
