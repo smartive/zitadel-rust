@@ -197,7 +197,89 @@ impl<'a> OpenApiFromRequest<'a> for &'a IntrospectedUser {
             security_req,
         ))
     }
-}
+
+    fn get_responses(_gen: &mut OpenApiGenerator) -> rocket_okapi::Result<Responses> {
+        let mut res = Responses::default();
+
+        // Manually defining the error response schema
+        let error_detail_schema = SchemaObject {
+            instance_type: Some(InstanceType::Object.into()),
+            object: Some(Box::new(ObjectValidation {
+                properties: {
+                    let mut properties = Map::new();
+                    properties.insert(
+                        "code".to_owned(),
+                        Schema::Object(SchemaObject {
+                            instance_type: Some(InstanceType::Integer.into()),
+                            ..Default::default()
+                        }),
+                    );
+                    properties.insert(
+                        "reason".to_owned(),
+                        Schema::Object(SchemaObject {
+                            instance_type: Some(InstanceType::String.into()),
+                            ..Default::default()
+                        }),
+                    );
+                    properties.insert(
+                        "description".to_owned(),
+                        Schema::Object(SchemaObject {
+                            instance_type: Some(InstanceType::String.into()),
+                            ..Default::default()
+                        }),
+                    );
+                    properties
+                },
+                required: vec!["code".to_owned(), "reason".to_owned(), "description".to_owned()]
+                    .into_iter()
+                    .collect::<BTreeSet<_>>(), // Convert Vec to BTreeSet
+                ..Default::default()
+            })),
+            ..Default::default()
+        };
+
+        let error_response_schema = SchemaObject {
+            instance_type: Some(InstanceType::Object.into()),
+            object: Some(Box::new(ObjectValidation {
+                properties: {
+                    let mut properties = Map::new();
+                    properties.insert("error".to_owned(), Schema::Object(error_detail_schema));
+                    properties
+                },
+                required: vec!["error".to_owned()].into_iter().collect::<BTreeSet<_>>(), // Convert Vec to BTreeSet
+                ..Default::default()
+            })),
+            ..Default::default()
+        };
+
+        // Create the content for the error response
+        let mut content = Map::new();
+        content.insert(
+            "application/json".to_owned(),
+            MediaType {
+                schema: Some(Schema::Object(error_response_schema).into()),
+                ..Default::default()
+            },
+        );
+
+        // Adding 400 BadRequest response
+        let bad_request_response = Response {
+            description: "Bad Request - Multiple authorization headers found.".to_owned(),
+            content: content.clone(),
+            ..Default::default()
+        };
+        res.responses.insert("400".to_owned(), RefOr::Object(bad_request_response));
+
+        // Adding 401 Unauthorized response
+        let unauthorized_response = Response {
+            description: "Unauthorized - The request requires user authentication.".to_owned(),
+            content: content.clone(),
+            ..Default::default()
+        };
+        res.responses.insert("401".to_owned(), RefOr::Object(unauthorized_response));
+
+        Ok(res)
+    }}
 
 #[cfg(test)]
 mod tests {
