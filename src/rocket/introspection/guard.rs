@@ -5,15 +5,20 @@ use rocket::http::Status;
 use rocket::request::{FromRequest, Outcome};
 use rocket::{async_trait, Request};
 #[cfg(feature = "rocket_okapi")]
-use rocket_okapi::gen::OpenApiGenerator;
-#[cfg(feature = "rocket_okapi")]
-use rocket_okapi::okapi::openapi3::{
-    Object, Responses, SecurityRequirement, SecurityScheme, SecuritySchemeData,
+use rocket_okapi::{
+    gen::OpenApiGenerator,
+    okapi::openapi3::{
+        Object, Responses, SecurityRequirement, SecurityScheme, SecuritySchemeData, MediaType,
+        RefOr, Response,
+    },
+    okapi::Map,
+    request::{OpenApiFromRequest, RequestHeaderInput},
 };
+
 #[cfg(feature = "rocket_okapi")]
-use rocket_okapi::okapi::Map;
+use schemars::schema::{InstanceType, ObjectValidation, Schema, SchemaObject};
 #[cfg(feature = "rocket_okapi")]
-use rocket_okapi::request::{OpenApiFromRequest, RequestHeaderInput};
+use std::collections::BTreeSet;
 
 use crate::oidc::introspection::{introspect, IntrospectionError, ZitadelIntrospectionResponse};
 use crate::rocket::introspection::IntrospectionConfig;
