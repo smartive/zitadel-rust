@@ -54,7 +54,7 @@ oidc = ["credentials", "dep:base64-compat"]
 ## Refer to the rocket module for more information.
 rocket = ["credentials", "oidc", "dep:rocket"]
 
-rocket_okapi = ["rocket", "dep:rocket_okapi"]
+rocket_okapi = ["rocket", "dep:rocket_okapi", "dep:schemars"]
 
 [dependencies]
 actix-web = { version = "4.5.1", optional = true }
@@ -86,6 +86,7 @@ tonic = { version = "0.11", features = [
 ], optional = true }
 tonic-types = { version = "0.11", optional = true }
 rocket_okapi = { version = "0.8.0", optional = true, default-features = false }
+schemars = {version = "0.8.21", optional = true}
 
 [dev-dependencies]
 chrono = "0.4.38"
