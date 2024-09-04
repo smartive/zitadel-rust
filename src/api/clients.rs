@@ -8,6 +8,7 @@ use std::error::Error;
 use custom_error::custom_error;
 use tonic::codegen::{Body, Bytes, InterceptedService, StdError};
 use tonic::service::Interceptor;
+
 use tonic::transport::{Channel, ClientTlsConfig, Endpoint};
 
 #[cfg(feature = "interceptors")]
@@ -284,18 +285,27 @@ where
 }
 
 async fn get_channel(api_endpoint: &str) -> Result<Channel, ClientError> {
+    let mut tls_config = ClientTlsConfig::default().assume_http2(true);
+
+    #[cfg(feature = "tls-roots")]
+    {
+        tls_config = tls_config.with_native_roots();
+    }
+
+    #[cfg(feature = "tls-webpki-roots")]
+    {
+        tls_config = tls_config.with_enabled_roots();
+    }
+
     Endpoint::from_shared(api_endpoint.to_string())
         .map_err(|_| ClientError::InvalidUrl)?
-        .tls_config(
-            ClientTlsConfig::default()
-                .assume_http2(true)
-                .with_native_roots(),
-        )
+        .tls_config(tls_config)
         .map_err(|_| ClientError::TlsInitializationError)?
         .connect()
         .await
         .map_err(|_| ClientError::ConnectionError)
 }
+
 
 #[cfg(test)]
 mod tests {
