@@ -16,7 +16,7 @@ include = [
 ]
 
 [features]
-default = []
+default = ["tonic/tls-roots"]
 
 ## Feature that enables support for the [actix framework](https://actix.rs/).
 actix = ["credentials", "oidc", "dep:actix-web"]
@@ -53,7 +53,6 @@ api-settings-v2 = ["api-common", "zitadel-settings-v2" ]
 api-user-v2 = ["api-common", "zitadel-user-v2" ]
 api-common = ["dep:prost", "dep:prost-types", "dep:tonic", "dep:tonic-types", "dep:pbjson-types" ]
 
-tls-roots = ["tonic/tls-roots"]
 tls-webpki-roots = ["tonic/tls-webpki-roots"]
 
 
