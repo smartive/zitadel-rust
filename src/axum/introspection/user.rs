@@ -108,6 +108,7 @@ pub struct IntrospectedUser {
     pub email_verified: Option<bool>,
     pub locale: Option<String>,
     pub project_roles: Option<HashMap<String, HashMap<String, String>>>,
+    pub metadata: Option<HashMap<String, String>>,
 }
 
 #[async_trait]
@@ -193,6 +194,7 @@ impl From<ZitadelIntrospectionResponse> for IntrospectedUser {
             email_verified: response.extra_fields().email_verified,
             locale: response.extra_fields().locale.clone(),
             project_roles: response.extra_fields().project_roles.clone(),
+            metadata: response.extra_fields().metadata.clone(),
         }
     }
 }
