@@ -5,6 +5,7 @@ use actix_web::error::{ErrorInternalServerError, ErrorUnauthorized};
 use actix_web::{Error, FromRequest, HttpRequest};
 use custom_error::custom_error;
 use openidconnect::TokenIntrospectionResponse;
+use std::collections::HashMap;
 
 use crate::actix::introspection::config::IntrospectionConfig;
 use crate::oidc::introspection::{introspect, IntrospectionError, ZitadelIntrospectionResponse};
@@ -37,6 +38,8 @@ pub struct IntrospectedUser {
     pub email: Option<String>,
     pub email_verified: Option<bool>,
     pub locale: Option<String>,
+    pub project_roles: Option<HashMap<String, HashMap<String, String>>>,
+    pub metadata: Option<HashMap<String, String>>,
 }
 
 impl From<ZitadelIntrospectionResponse> for IntrospectedUser {
@@ -51,6 +54,8 @@ impl From<ZitadelIntrospectionResponse> for IntrospectedUser {
             email: response.extra_fields().email.clone(),
             email_verified: response.extra_fields().email_verified,
             locale: response.extra_fields().locale.clone(),
+            project_roles: response.extra_fields().project_roles.clone(),
+            metadata: response.extra_fields().metadata.clone(),
         }
     }
 }
