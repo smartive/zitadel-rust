@@ -177,3 +177,36 @@ http-body-util = "0.1.0"
 
 [package.metadata.docs.rs]
 all-features = true
+
+
+[[example]]
+name = "actix_webapi_oauth_interception_basic"
+required-features = ["actix"]
+
+[[example]]
+name = "axum_webapi_oauth_interception_basic"
+required-features = ["axum"]
+
+[[example]]
+name = "fetch_profile_with_pat"
+required-features = ["api", "interceptors"]
+
+[[example]]
+name = "fetch_profile_with_service_account"
+required-features = ["api", "interceptors"]
+
+[[example]]
+name = "rocket_webapi_oauth_interception_basic"
+required-features = ["rocket"]
+
+[[example]]
+name = "rocket_webapi_oauth_interception_jwtprofile_cached"
+required-features = ["rocket", "introspection_cache"]
+
+[[example]]
+name = "rocket_webapi_oauth_interception_jwtprofile"
+required-features = ["rocket"]
+
+[[example]]
+name = "service_account_authentication"
+required-features = ["credentials"]
