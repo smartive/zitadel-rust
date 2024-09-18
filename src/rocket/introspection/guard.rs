@@ -4,6 +4,9 @@ use rocket::figment::Figment;
 use rocket::http::Status;
 use rocket::request::{FromRequest, Outcome};
 use rocket::{async_trait, Request};
+use std::collections::BTreeSet;
+use std::collections::HashMap;
+
 #[cfg(feature = "rocket_okapi")]
 use rocket_okapi::{
     gen::OpenApiGenerator,
@@ -14,12 +17,9 @@ use rocket_okapi::{
     okapi::Map,
     request::{OpenApiFromRequest, RequestHeaderInput},
 };
-
 #[cfg(feature = "rocket_okapi")]
 use schemars::schema::{InstanceType, ObjectValidation, Schema, SchemaObject};
 #[cfg(feature = "rocket_okapi")]
-use std::collections::BTreeSet;
-use std::collections::HashMap;
 
 use crate::oidc::introspection::{introspect, IntrospectionError, ZitadelIntrospectionResponse};
 use crate::rocket::introspection::IntrospectionConfig;
