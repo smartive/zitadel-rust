@@ -6,86 +6,94 @@
 use std::error::Error;
 
 use custom_error::custom_error;
-use tonic::codegen::InterceptedService;
+use tonic::codegen::{Body, Bytes, InterceptedService, StdError};
 use tonic::service::Interceptor;
-use tonic::transport::{Channel, Endpoint};
-use tonic::{Request, Status};
 
+use tonic::transport::{Channel, ClientTlsConfig, Endpoint};
+
+#[cfg(feature = "interceptors")]
 use crate::api::interceptors::{AccessTokenInterceptor, ServiceAccountInterceptor};
-use crate::api::zitadel::oidc::v2beta::oidc_service_client::OidcServiceClient;
-use crate::api::zitadel::org::v2beta::organization_service_client::OrganizationServiceClient;
-use crate::api::zitadel::session::v2beta::session_service_client::SessionServiceClient;
-use crate::api::zitadel::settings::v2beta::settings_service_client::SettingsServiceClient;
-use crate::api::zitadel::system::v1::system_service_client::SystemServiceClient;
-use crate::api::zitadel::user::v2beta::user_service_client::UserServiceClient;
-use crate::credentials::{AuthenticationOptions, ServiceAccount};
 
-use super::zitadel::{
-    admin::v1::admin_service_client::AdminServiceClient,
-    auth::v1::auth_service_client::AuthServiceClient,
-    management::v1::management_service_client::ManagementServiceClient,
-};
+#[cfg(feature = "api-oidc-v2")]
+use crate::api::zitadel::oidc::v2::oidc_service_client::OidcServiceClient;
+#[cfg(feature = "api-org-v2")]
+use crate::api::zitadel::org::v2::organization_service_client::OrganizationServiceClient;
+#[cfg(feature = "api-session-v2")]
+use crate::api::zitadel::session::v2::session_service_client::SessionServiceClient;
+#[cfg(feature = "api-settings-v2")]
+use crate::api::zitadel::settings::v2::settings_service_client::SettingsServiceClient;
+#[cfg(feature = "api-user-v2")]
+use crate::api::zitadel::user::v2::user_service_client::UserServiceClient;
+
+#[cfg(feature = "api-admin-v1")]
+use crate::api::zitadel::admin::v1::admin_service_client::AdminServiceClient;
+#[cfg(feature = "api-auth-v1")]
+use crate::api::zitadel::auth::v1::auth_service_client::AuthServiceClient;
+#[cfg(feature = "api-management-v1")]
+use crate::api::zitadel::management::v1::management_service_client::ManagementServiceClient;
+#[cfg(feature = "api-system-v1")]
+use crate::api::zitadel::system::v1::system_service_client::SystemServiceClient;
+
+#[cfg(feature = "interceptors")]
+use crate::credentials::{AuthenticationOptions, ServiceAccount};
 
 custom_error! {
     /// Errors that may occur when creating a client.
     pub ClientError
         InvalidUrl = "the provided url is invalid",
         ConnectionError = "could not connect to provided endpoint",
-}
-
-enum AuthType {
-    None,
-    AccessToken(String),
-    ServiceAccount(ServiceAccount, Option<AuthenticationOptions>),
-}
-
-/// Helper [Interceptor] that allows chaining of multiple interceptors.
-/// This is used to help return the same type in all builder methods like
-/// [ClientBuilder::build_management_client]. Otherwise, each interceptor
-/// would create its own return type. With this interceptor, the return type
-/// stays the same and is not dependent on the authentication type used.
-/// The builder can always return `Client<InterceptedService<Channel, ChainedInterceptor>>`.
-pub struct ChainedInterceptor {
-    interceptors: Vec<Box<dyn Interceptor + Send>>,
-}
-
-impl ChainedInterceptor {
-    pub(crate) fn new() -> Self {
-        Self {
-            interceptors: Vec::new(),
-        }
-    }
-
-    pub(crate) fn add_interceptor(mut self, interceptor: Box<dyn Interceptor + Send>) -> Self {
-        self.interceptors.push(interceptor);
-        self
-    }
-}
-
-impl Interceptor for ChainedInterceptor {
-    fn call(&mut self, request: Request<()>) -> Result<Request<()>, Status> {
-        let mut request = request;
-        for interceptor in &mut self.interceptors {
-            request = interceptor.call(request)?;
-        }
-        Ok(request)
-    }
+        TlsInitializationError = "could not setup tls connection",
 }
 
 /// A builder to create configured gRPC clients for ZITADEL API access.
 /// The builder accepts the api endpoint and (depending on activated features)
 /// an authentication method.
-pub struct ClientBuilder {
+pub struct ClientBuilder<T: BuildInterceptedService = NoInterceptor> {
     api_endpoint: String,
-    auth_type: AuthType,
+    interceptor: T,
 }
 
-impl ClientBuilder {
-    /// Create a new client builder with the the provided endpoint.
-    pub fn new(api_endpoint: &str) -> Self {
-        Self {
+pub trait BuildInterceptedService {
+    type Target;
+    fn build_service(self, channel: Channel) -> Self::Target;
+}
+
+pub struct NoInterceptor;
+
+impl BuildInterceptedService for NoInterceptor {
+    type Target = Channel;
+    fn build_service(self, channel: Channel) -> Self::Target {
+        channel
+    }
+}
+
+impl<T> BuildInterceptedService for T
+where
+    T: Interceptor,
+{
+    type Target = InterceptedService<Channel, T>;
+    fn build_service(self, channel: Channel) -> Self::Target {
+        InterceptedService::new(channel, self)
+    }
+}
+
+impl ClientBuilder<NoInterceptor> {
+    /// Create a new client builder with the provided endpoint.
+    pub fn new(api_endpoint: &str) -> ClientBuilder<NoInterceptor> {
+        ClientBuilder {
             api_endpoint: api_endpoint.to_string(),
-            auth_type: AuthType::None,
+            interceptor: NoInterceptor,
+        }
+    }
+
+    /// Configure the client builder to inject a custom interceptor,
+    /// which can be used to modify the [Request][tonic::request::Request] before being sent.
+    ///
+    /// See [Interceptor][tonic::service::Interceptor] for more details.
+    pub fn with_interceptor<I: Interceptor>(self, interceptor: I) -> ClientBuilder<I> {
+        ClientBuilder {
+            api_endpoint: self.api_endpoint,
+            interceptor,
         }
     }
 
@@ -96,9 +104,8 @@ impl ClientBuilder {
     /// Clients with this authentication method will have the [`AccessTokenInterceptor`]
     /// attached.
     #[cfg(feature = "interceptors")]
-    pub fn with_access_token(mut self, access_token: &str) -> Self {
-        self.auth_type = AuthType::AccessToken(access_token.to_string());
-        self
+    pub fn with_access_token(self, access_token: &str) -> ClientBuilder<AccessTokenInterceptor> {
+        self.with_interceptor(AccessTokenInterceptor::new(access_token))
     }
 
     /// Configure the client builder to use a [`ServiceAccount`][crate::credentials::ServiceAccount].
@@ -109,242 +116,201 @@ impl ClientBuilder {
     /// that fetches an access token from ZITADEL and renewes it when it expires.
     #[cfg(feature = "interceptors")]
     pub fn with_service_account(
-        mut self,
+        self,
         service_account: &ServiceAccount,
         auth_options: Option<AuthenticationOptions>,
-    ) -> Self {
-        self.auth_type = AuthType::ServiceAccount(service_account.clone(), auth_options);
-        self
+    ) -> ClientBuilder<ServiceAccountInterceptor> {
+        let interceptor = ServiceAccountInterceptor::new(
+            &self.api_endpoint,
+            service_account,
+            auth_options.clone(),
+        );
+        self.with_interceptor(interceptor)
     }
+}
 
+impl<T> ClientBuilder<T>
+where
+    T: BuildInterceptedService,
+    T::Target: tonic::client::GrpcService<tonic::body::BoxBody>,
+    <T::Target as tonic::client::GrpcService<tonic::body::BoxBody>>::ResponseBody:
+        Body<Data = Bytes> + Send + 'static,
+    <<T::Target as tonic::client::GrpcService<tonic::body::BoxBody>>::ResponseBody as Body>::Error:
+        Into<StdError> + Send,
+{
     /// Create a new [`AdminServiceClient`].
-    ///
-    /// Depending on the configured authentication method, the client has
-    /// specialised interceptors attached.
     ///
     /// ### Errors
     ///
     /// This function returns a [`ClientError`] if the provided API endpoint
     /// cannot be parsed into a valid URL or if the connection to the endpoint
     /// is not possible.
-    pub async fn build_admin_client(
-        &self,
-    ) -> Result<AdminServiceClient<InterceptedService<Channel, ChainedInterceptor>>, Box<dyn Error>>
-    {
-        let channel = get_channel(&self.api_endpoint).await?;
-        Ok(AdminServiceClient::with_interceptor(
-            channel,
-            self.get_chained_interceptor(),
-        ))
+    #[cfg(feature = "api-admin-v1")]
+    pub async fn build_admin_client(self) -> Result<AdminServiceClient<T::Target>, Box<dyn Error>> {
+        let channel = self
+            .interceptor
+            .build_service(get_channel(&self.api_endpoint).await?);
+        Ok(AdminServiceClient::new(channel))
     }
 
     /// Create a new [`AuthServiceClient`].
     ///
-    /// Depending on the configured authentication method, the client has
-    /// specialised interceptors attached.
-    ///
     /// ### Errors
     ///
     /// This function returns a [`ClientError`] if the provided API endpoint
     /// cannot be parsed into a valid URL or if the connection to the endpoint
     /// is not possible.
-    pub async fn build_auth_client(
-        &self,
-    ) -> Result<AuthServiceClient<InterceptedService<Channel, ChainedInterceptor>>, Box<dyn Error>>
-    {
-        let channel = get_channel(&self.api_endpoint).await?;
-        Ok(AuthServiceClient::with_interceptor(
-            channel,
-            self.get_chained_interceptor(),
-        ))
+    #[cfg(feature = "api-auth-v1")]
+    pub async fn build_auth_client(self) -> Result<AuthServiceClient<T::Target>, Box<dyn Error>> {
+        let channel = self
+            .interceptor
+            .build_service(get_channel(&self.api_endpoint).await?);
+        Ok(AuthServiceClient::new(channel))
     }
 
     /// Create a new [`ManagementServiceClient`].
     ///
-    /// Depending on the configured authentication method, the client has
-    /// specialised interceptors attached.
-    ///
     /// ### Errors
     ///
     /// This function returns a [`ClientError`] if the provided API endpoint
     /// cannot be parsed into a valid URL or if the connection to the endpoint
     /// is not possible.
+    #[cfg(feature = "api-management-v1")]
     pub async fn build_management_client(
-        &self,
-    ) -> Result<
-        ManagementServiceClient<InterceptedService<Channel, ChainedInterceptor>>,
-        Box<dyn Error>,
-    > {
-        let channel = get_channel(&self.api_endpoint).await?;
-        Ok(ManagementServiceClient::with_interceptor(
-            channel,
-            self.get_chained_interceptor(),
-        ))
+        self,
+    ) -> Result<ManagementServiceClient<T::Target>, Box<dyn Error>> {
+        let channel = self
+            .interceptor
+            .build_service(get_channel(&self.api_endpoint).await?);
+        Ok(ManagementServiceClient::new(channel))
     }
 
     /// Create a new [`OidcServiceClient`].
     ///
-    /// Depending on the configured authentication method, the client has
-    /// specialised interceptors attached.
-    ///
     /// ### Errors
     ///
     /// This function returns a [`ClientError`] if the provided API endpoint
     /// cannot be parsed into a valid URL or if the connection to the endpoint
     /// is not possible.
-    pub async fn build_oidc_client(
-        &self,
-    ) -> Result<OidcServiceClient<InterceptedService<Channel, ChainedInterceptor>>, Box<dyn Error>>
-    {
-        let channel = get_channel(&self.api_endpoint).await?;
-        Ok(OidcServiceClient::with_interceptor(
-            channel,
-            self.get_chained_interceptor(),
-        ))
+    #[cfg(feature = "api-oidc-v2")]
+    pub async fn build_oidc_client(self) -> Result<OidcServiceClient<T::Target>, Box<dyn Error>> {
+        let channel = self
+            .interceptor
+            .build_service(get_channel(&self.api_endpoint).await?);
+        Ok(OidcServiceClient::new(channel))
     }
 
     /// Create a new [`OrganizationServiceClient`].
     ///
-    /// Depending on the configured authentication method, the client has
-    /// specialised interceptors attached.
-    ///
     /// ### Errors
     ///
     /// This function returns a [`ClientError`] if the provided API endpoint
     /// cannot be parsed into a valid URL or if the connection to the endpoint
     /// is not possible.
+    #[cfg(feature = "api-org-v2")]
     pub async fn build_organization_client(
-        &self,
-    ) -> Result<
-        OrganizationServiceClient<InterceptedService<Channel, ChainedInterceptor>>,
-        Box<dyn Error>,
-    > {
-        let channel = get_channel(&self.api_endpoint).await?;
-        Ok(OrganizationServiceClient::with_interceptor(
-            channel,
-            self.get_chained_interceptor(),
-        ))
+        self,
+    ) -> Result<OrganizationServiceClient<T::Target>, Box<dyn Error>> {
+        let channel = self
+            .interceptor
+            .build_service(get_channel(&self.api_endpoint).await?);
+        Ok(OrganizationServiceClient::new(channel))
     }
 
     /// Create a new [`SessionServiceClient`].
     ///
-    /// Depending on the configured authentication method, the client has
-    /// specialised interceptors attached.
-    ///
     /// ### Errors
     ///
     /// This function returns a [`ClientError`] if the provided API endpoint
     /// cannot be parsed into a valid URL or if the connection to the endpoint
     /// is not possible.
+    #[cfg(feature = "api-session-v2")]
     pub async fn build_session_client(
-        &self,
-    ) -> Result<SessionServiceClient<InterceptedService<Channel, ChainedInterceptor>>, Box<dyn Error>>
-    {
-        let channel = get_channel(&self.api_endpoint).await?;
-        Ok(SessionServiceClient::with_interceptor(
-            channel,
-            self.get_chained_interceptor(),
-        ))
+        self,
+    ) -> Result<SessionServiceClient<T::Target>, Box<dyn Error>> {
+        let channel = self
+            .interceptor
+            .build_service(get_channel(&self.api_endpoint).await?);
+        Ok(SessionServiceClient::new(channel))
     }
 
     /// Create a new [`SettingsServiceClient`].
     ///
-    /// Depending on the configured authentication method, the client has
-    /// specialised interceptors attached.
-    ///
     /// ### Errors
     ///
     /// This function returns a [`ClientError`] if the provided API endpoint
     /// cannot be parsed into a valid URL or if the connection to the endpoint
     /// is not possible.
+    #[cfg(feature = "api-settings-v2")]
     pub async fn build_settings_client(
-        &self,
-    ) -> Result<
-        SettingsServiceClient<InterceptedService<Channel, ChainedInterceptor>>,
-        Box<dyn Error>,
-    > {
-        let channel = get_channel(&self.api_endpoint).await?;
-        Ok(SettingsServiceClient::with_interceptor(
-            channel,
-            self.get_chained_interceptor(),
-        ))
+        self,
+    ) -> Result<SettingsServiceClient<T::Target>, Box<dyn Error>> {
+        let channel = self
+            .interceptor
+            .build_service(get_channel(&self.api_endpoint).await?);
+        Ok(SettingsServiceClient::new(channel))
     }
 
     /// Create a new [`SystemServiceClient`].
     ///
-    /// Depending on the configured authentication method, the client has
-    /// specialised interceptors attached.
-    ///
     /// ### Errors
     ///
     /// This function returns a [`ClientError`] if the provided API endpoint
     /// cannot be parsed into a valid URL or if the connection to the endpoint
     /// is not possible.
+    #[cfg(feature = "api-system-v1")]
     pub async fn build_system_client(
-        &self,
-    ) -> Result<SystemServiceClient<InterceptedService<Channel, ChainedInterceptor>>, Box<dyn Error>>
-    {
-        let channel = get_channel(&self.api_endpoint).await?;
-        Ok(SystemServiceClient::with_interceptor(
-            channel,
-            self.get_chained_interceptor(),
-        ))
+        self,
+    ) -> Result<SystemServiceClient<T::Target>, Box<dyn Error>> {
+        let channel = self
+            .interceptor
+            .build_service(get_channel(&self.api_endpoint).await?);
+        Ok(SystemServiceClient::new(channel))
     }
 
     /// Create a new [`UserServiceClient`].
     ///
-    /// Depending on the configured authentication method, the client has
-    /// specialised interceptors attached.
-    ///
     /// ### Errors
     ///
     /// This function returns a [`ClientError`] if the provided API endpoint
     /// cannot be parsed into a valid URL or if the connection to the endpoint
     /// is not possible.
-    pub async fn build_user_client(
-        &self,
-    ) -> Result<UserServiceClient<InterceptedService<Channel, ChainedInterceptor>>, Box<dyn Error>>
-    {
-        let channel = get_channel(&self.api_endpoint).await?;
-        Ok(UserServiceClient::with_interceptor(
-            channel,
-            self.get_chained_interceptor(),
-        ))
-    }
-
-    fn get_chained_interceptor(&self) -> ChainedInterceptor {
-        let mut interceptor = ChainedInterceptor::new();
-        match &self.auth_type {
-            AuthType::AccessToken(token) => {
-                interceptor =
-                    interceptor.add_interceptor(Box::new(AccessTokenInterceptor::new(token)));
-            }
-            AuthType::ServiceAccount(service_account, auth_options) => {
-                interceptor =
-                    interceptor.add_interceptor(Box::new(ServiceAccountInterceptor::new(
-                        &self.api_endpoint,
-                        service_account,
-                        auth_options.clone(),
-                    )));
-            }
-            _ => {}
-        }
-
-        interceptor
+    #[cfg(feature = "api-user-v2")]
+    pub async fn build_user_client(self) -> Result<UserServiceClient<T::Target>, Box<dyn Error>> {
+        let channel = self
+            .interceptor
+            .build_service(get_channel(&self.api_endpoint).await?);
+        Ok(UserServiceClient::new(channel))
     }
 }
 
 async fn get_channel(api_endpoint: &str) -> Result<Channel, ClientError> {
+    let mut tls_config = ClientTlsConfig::default().assume_http2(true);
+
+    #[cfg(feature = "tls-roots")]
+    {
+        tls_config = tls_config.with_native_roots();
+    }
+
+    #[cfg(feature = "tls-webpki-roots")]
+    {
+        tls_config = tls_config.with_enabled_roots();
+    }
+
     Endpoint::from_shared(api_endpoint.to_string())
         .map_err(|_| ClientError::InvalidUrl)?
+        .tls_config(tls_config)
+        .map_err(|_| ClientError::TlsInitializationError)?
         .connect()
         .await
         .map_err(|_| ClientError::ConnectionError)
 }
 
+
 #[cfg(test)]
 mod tests {
     use super::*;
+    use tonic::Request;
 
     const ZITADEL_URL: &str = "https://zitadel-libraries-l8boqa.zitadel.cloud";
     const SERVICE_ACCOUNT: &str = r#"
@@ -355,23 +321,33 @@ mod tests {
         "userId": "181828061098934529"
     }"#;
 
-    #[test]
-    fn client_builder_without_auth_passes_requests() {
-        let mut interceptor = ClientBuilder::new(ZITADEL_URL).get_chained_interceptor();
-        let request = Request::new(());
+    #[tokio::test]
+    async fn clients_are_cloneable() {
+        let access_token_client = ClientBuilder::new(ZITADEL_URL)
+            .with_access_token("token")
+            .build_user_client()
+            .await
+            .unwrap();
+        let _cloned = access_token_client.clone();
 
-        assert!(request.metadata().is_empty());
+        let service_account_client = ClientBuilder::new(ZITADEL_URL)
+            .with_service_account(
+                &ServiceAccount::load_from_json(SERVICE_ACCOUNT).unwrap(),
+                None,
+            )
+            .build_user_client()
+            .await
+            .unwrap();
 
-        let request = interceptor.call(request).unwrap();
-
-        assert!(request.metadata().is_empty());
+        let _cloned = service_account_client.clone();
     }
 
     #[test]
     fn client_builder_with_access_token_attaches_it() {
         let mut interceptor = ClientBuilder::new(ZITADEL_URL)
             .with_access_token("token")
-            .get_chained_interceptor();
+            .interceptor;
+
         let request = Request::new(());
 
         assert!(request.metadata().is_empty());
@@ -390,7 +366,8 @@ mod tests {
         let sa = ServiceAccount::load_from_json(SERVICE_ACCOUNT).unwrap();
         let mut interceptor = ClientBuilder::new(ZITADEL_URL)
             .with_service_account(&sa, None)
-            .get_chained_interceptor();
+            .interceptor;
+
         let request = Request::new(());
 
         assert!(request.metadata().is_empty());

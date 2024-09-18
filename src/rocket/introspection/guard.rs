@@ -19,6 +19,7 @@ use rocket_okapi::{
 use schemars::schema::{InstanceType, ObjectValidation, Schema, SchemaObject};
 #[cfg(feature = "rocket_okapi")]
 use std::collections::BTreeSet;
+use std::collections::HashMap;
 
 use crate::oidc::introspection::{introspect, IntrospectionError, ZitadelIntrospectionResponse};
 use crate::rocket::introspection::IntrospectionConfig;
@@ -53,6 +54,8 @@ pub struct IntrospectedUser {
     pub email: Option<String>,
     pub email_verified: Option<bool>,
     pub locale: Option<String>,
+    pub project_roles: Option<HashMap<String, HashMap<String, String>>>,
+    pub metadata: Option<HashMap<String, String>>,
 }
 
 impl From<ZitadelIntrospectionResponse> for IntrospectedUser {
@@ -67,6 +70,8 @@ impl From<ZitadelIntrospectionResponse> for IntrospectedUser {
             email: response.extra_fields().email.clone(),
             email_verified: response.extra_fields().email_verified,
             locale: response.extra_fields().locale.clone(),
+            project_roles: response.extra_fields().project_roles.clone(),
+            metadata: response.extra_fields().metadata.clone(),
         }
     }
 }
