@@ -13,8 +13,7 @@
     [
       "semantic-release-cargo",
       {
-        "checkArgs": ["--all-features"],
-        "publishArgs": ["--all-features"]
+        "allFeatures": true
       }
     ],
     [
