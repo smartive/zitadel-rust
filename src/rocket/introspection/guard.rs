@@ -1,12 +1,30 @@
 use custom_error::custom_error;
 use openidconnect::TokenIntrospectionResponse;
+use rocket::figment::Figment;
 use rocket::http::Status;
 use rocket::request::{FromRequest, Outcome};
 use rocket::{async_trait, Request};
+use std::collections::BTreeSet;
 use std::collections::HashMap;
+
+#[cfg(feature = "rocket_okapi")]
+use rocket_okapi::{
+    gen::OpenApiGenerator,
+    okapi::openapi3::{
+        Object, Responses, SecurityRequirement, SecurityScheme, SecuritySchemeData, MediaType,
+        RefOr, Response,
+    },
+    okapi::Map,
+    request::{OpenApiFromRequest, RequestHeaderInput},
+};
+#[cfg(feature = "rocket_okapi")]
+use schemars::schema::{InstanceType, ObjectValidation, Schema, SchemaObject};
+#[cfg(feature = "rocket_okapi")]
 
 use crate::oidc::introspection::{introspect, IntrospectionError, ZitadelIntrospectionResponse};
 use crate::rocket::introspection::IntrospectionConfig;
+
+use super::config::IntrospectionRocketConfig;
 
 custom_error! {
     /// Error type for guard related errors.
@@ -146,6 +164,127 @@ impl<'request> FromRequest<'request> for &'request IntrospectedUser {
         }
     }
 }
+
+#[cfg(feature = "rocket_okapi")]
+impl<'a> OpenApiFromRequest<'a> for &'a IntrospectedUser {
+    fn from_request_input(
+        _gen: &mut OpenApiGenerator,
+        _name: String,
+        _required: bool,
+    ) -> rocket_okapi::Result<RequestHeaderInput> {
+        let figment: Figment = rocket::Config::figment();
+        let config: IntrospectionRocketConfig = figment
+            .extract()
+            .expect("authority must be set in Rocket.toml");
+
+        // Setup global requirement for Security scheme
+        let security_scheme = SecurityScheme {
+            description: Some(
+                "Use OpenID Connect to authenticate. (does not work in RapiDoc at all)".to_owned(),
+            ),
+            data: SecuritySchemeData::OpenIdConnect {
+                open_id_connect_url: format!(
+                    "{}/.well-known/openid-configuration",
+                    config.authority
+                ),
+            },
+            extensions: Object::default(),
+        };
+        // Add the requirement for this route/endpoint
+        // This can change between routes.
+        let mut security_req = SecurityRequirement::new();
+        // Each security requirement needs to be met before access is allowed.
+        security_req.insert("OpenID".to_owned(), Vec::new());
+        // These vvvv-------^^^^^^^ values need to match exactly!
+        Ok(RequestHeaderInput::Security(
+            "OpenID".to_owned(),
+            security_scheme,
+            security_req,
+        ))
+    }
+
+    fn get_responses(_gen: &mut OpenApiGenerator) -> rocket_okapi::Result<Responses> {
+        let mut res = Responses::default();
+
+        // Manually defining the error response schema
+        let error_detail_schema = SchemaObject {
+            instance_type: Some(InstanceType::Object.into()),
+            object: Some(Box::new(ObjectValidation {
+                properties: {
+                    let mut properties = Map::new();
+                    properties.insert(
+                        "code".to_owned(),
+                        Schema::Object(SchemaObject {
+                            instance_type: Some(InstanceType::Integer.into()),
+                            ..Default::default()
+                        }),
+                    );
+                    properties.insert(
+                        "reason".to_owned(),
+                        Schema::Object(SchemaObject {
+                            instance_type: Some(InstanceType::String.into()),
+                            ..Default::default()
+                        }),
+                    );
+                    properties.insert(
+                        "description".to_owned(),
+                        Schema::Object(SchemaObject {
+                            instance_type: Some(InstanceType::String.into()),
+                            ..Default::default()
+                        }),
+                    );
+                    properties
+                },
+                required: vec!["code".to_owned(), "reason".to_owned(), "description".to_owned()]
+                    .into_iter()
+                    .collect::<BTreeSet<_>>(), // Convert Vec to BTreeSet
+                ..Default::default()
+            })),
+            ..Default::default()
+        };
+
+        let error_response_schema = SchemaObject {
+            instance_type: Some(InstanceType::Object.into()),
+            object: Some(Box::new(ObjectValidation {
+                properties: {
+                    let mut properties = Map::new();
+                    properties.insert("error".to_owned(), Schema::Object(error_detail_schema));
+                    properties
+                },
+                required: vec!["error".to_owned()].into_iter().collect::<BTreeSet<_>>(), // Convert Vec to BTreeSet
+                ..Default::default()
+            })),
+            ..Default::default()
+        };
+
+        // Create the content for the error response
+        let mut content = Map::new();
+        content.insert(
+            "application/json".to_owned(),
+            MediaType {
+                schema: Some(Schema::Object(error_response_schema).into()),
+                ..Default::default()
+            },
+        );
+
+        // Adding 400 BadRequest response
+        let bad_request_response = Response {
+            description: "Bad Request - Multiple authorization headers found.".to_owned(),
+            content: content.clone(),
+            ..Default::default()
+        };
+        res.responses.insert("400".to_owned(), RefOr::Object(bad_request_response));
+
+        // Adding 401 Unauthorized response
+        let unauthorized_response = Response {
+            description: "Unauthorized - The request requires user authentication.".to_owned(),
+            content: content.clone(),
+            ..Default::default()
+        };
+        res.responses.insert("401".to_owned(), RefOr::Object(unauthorized_response));
+
+        Ok(res)
+    }}
 
 #[cfg(test)]
 mod tests {
