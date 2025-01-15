@@ -2,6 +2,7 @@ use custom_error::custom_error;
 use openidconnect::http::Method;
 use openidconnect::reqwest::async_http_client;
 use openidconnect::url::{ParseError, Url};
+use openidconnect::HttpResponse;
 use openidconnect::{
     core::CoreTokenType, ExtraTokenFields, HttpRequest, StandardTokenIntrospectionResponse,
 };
@@ -9,7 +10,8 @@ use openidconnect::{
 use reqwest::header::{HeaderMap, ACCEPT, AUTHORIZATION, CONTENT_TYPE};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
-use std::fmt::Debug;
+use std::error::Error;
+use std::fmt::{Debug, Display};
 
 use crate::credentials::{Application, ApplicationError};
 
@@ -25,6 +27,7 @@ custom_error! {
         ParseUrl{source: ParseError} = "could not parse url: {source}",
         ParseResponse{source: serde_json::Error} = "could not parse introspection response: {source}",
         DecodeResponse{source: base64::DecodeError} = "could not decode base64 metadata: {source}",
+        ResponseError{source: ZitadelResponseError} = "received error response from Zitadel: {source}",
 }
 
 /// Introspection response information that is returned by the ZITADEL
@@ -221,12 +224,38 @@ pub async fn introspect(
     .await
     .map_err(|source| IntrospectionError::RequestFailed { source })?;
 
+    if !response.status_code.is_success() {
+        return Err(IntrospectionError::ResponseError {
+            source: ZitadelResponseError::from_response(&response),
+        });
+    }
+
     let mut response: ZitadelIntrospectionResponse =
         serde_json::from_slice(response.body.as_slice())
             .map_err(|source| IntrospectionError::ParseResponse { source })?;
     decode_metadata(&mut response)?;
     Ok(response)
 }
+
+#[derive(Debug)]
+struct ZitadelResponseError {
+    status_code: String,
+    body: String,
+}
+impl ZitadelResponseError {
+    fn from_response(response: &HttpResponse) -> Self {
+        Self {
+            status_code: response.status_code.to_string(),
+            body: String::from_utf8_lossy(response.body.as_slice()).to_string(),
+        }
+    }
+}
+impl Display for ZitadelResponseError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "status code: {}, body: {}", self.status_code, self.body)
+    }
+}
+impl Error for ZitadelResponseError {}
 
 // Metadata values are base64 encoded.
 fn decode_metadata(response: &mut ZitadelIntrospectionResponse) -> Result<(), IntrospectionError> {
