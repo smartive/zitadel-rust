@@ -2,6 +2,7 @@ use custom_error::custom_error;
 use jsonwebtoken::{encode, Algorithm, EncodingKey, Header};
 use serde::{Deserialize, Serialize};
 use std::fs::read_to_string;
+use std::path::Path;
 
 use crate::credentials::jwt::JwtClaims;
 
@@ -52,7 +53,7 @@ impl Application {
     /// println!("{:#?}", application);
     /// # Ok::<(), Box<dyn std::error::Error>>(())
     /// ```
-    pub fn load_from_file(file_path: &str) -> Result<Self, ApplicationError> {
+    pub fn load_from_file<P: AsRef<Path>>(file_path: P) -> Result<Self, ApplicationError> {
         let data = read_to_string(file_path).map_err(|e| ApplicationError::Io { source: e })?;
         Application::load_from_json(data.as_str())
     }
