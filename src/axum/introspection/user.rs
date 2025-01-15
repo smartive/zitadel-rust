@@ -4,7 +4,6 @@ use std::fmt::Debug;
 use crate::axum::introspection::IntrospectionState;
 use axum::http::StatusCode;
 use axum::{
-    async_trait,
     extract::{FromRef, FromRequestParts},
     http::request::Parts,
     response::IntoResponse,
@@ -111,7 +110,6 @@ pub struct IntrospectedUser {
     pub metadata: Option<HashMap<String, String>>,
 }
 
-#[async_trait]
 impl<S> FromRequestParts<S> for IntrospectedUser
 where
     IntrospectionState: FromRef<S>,
