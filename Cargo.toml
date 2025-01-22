@@ -153,7 +153,7 @@ custom_error = "1.9.2"
 document-features = { version = "0.2.8", optional = true }
 jsonwebtoken = { version = "9.3.0", optional = true }
 moka = { version = "0.12.8", features = ["future"], optional = true }
-openidconnect = { version = "3.5.0", optional = true }
+openidconnect = { version = "4.0.0", optional = true }
 pbjson-types = { version = "0.7.0", optional = true }
 prost = { version = "0.13.1", optional = true }
 prost-types = { version = "0.13.1", optional = true }
