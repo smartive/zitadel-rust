@@ -350,9 +350,9 @@ pub async fn fetch_jwks(idm_url: &str) -> Result<JwkSet, IntrospectionError> {
 
 
 pub async fn local_jwt_validation<U>(issuers: &[&str],
-                                  audiences: &[String],
+                                  audiences: &[&str],
                                   jwks_keys: JwkSet,
-                                  token: &str, ) -> Result<TokenData<U>, IntrospectionError>
+                                  token: &str, ) -> Result<U, IntrospectionError>
 
 where
     U: DeserializeOwned,
@@ -377,7 +377,7 @@ where
                 validation.validate_exp = true;
 
                 let decoded_token: TokenData<U> = decode::<U>(token, &decoding_key, &validation).map_err(|source| IntrospectionError::JsonWebTokenErrors { source })?;
-                Ok(decoded_token)
+                Ok(decoded_token.claims)
             }
             _ => unreachable!("Not yet Implemented or supported by Zitadel"),
         }
@@ -393,14 +393,58 @@ mod tests {
 
     use crate::oidc::discovery::discover;
     use openidconnect::TokenIntrospectionResponse;
-
+    use crate::credentials::{AuthenticationOptions, ServiceAccount};
     use super::*;
 
     const ZITADEL_URL: &str = "https://zitadel-libraries-l8boqa.zitadel.cloud";
     const ZITADEL_URL_ALTER: &str = "https://ferris-hk3otq.us1.zitadel.cloud";
+    const ZITADEL_ISSUERS: [&str; 1] = ["https://ferris-hk3otq.us1.zitadel.cloud"];
+    const ZITADEL_AUDIENCES: [&str; 1] = ["service_user"];
+    const SERVICE_ACCOUNT: &str = r#"{
+    "type":"serviceaccount",
+    "keyId":"305100363495643757",
+    "key":"-----BEGIN RSA PRIVATE KEY-----\nMIIEpAIBAAKCAQEAqqeKZxqy0upui0Ez7YDmm+hTtoSMAlTtFKjtkqn+AOKuicrj\ngzsZ9w/axLc0yv5JamG4iABRioGWi1x6lK09nNa9CcWod51SgihQc5Vpgi2grOBf\nk1FFb1JB3UcVJ7T6ix39cdEpK134FpfHAaef1Uzca/uX+Mj807Dkper0CZ/DV+2U\n97NzzqSK7F2jlZP/qHfCewjR9+uCT2sPqlrUxlyuz0f+Bl5K7ATA9RAMUVofdt20\nZNIRrKlRZJ9xnNUcZP8Gj5zd07OXuzS0kD+iL4a1rctGz1YIsPwxYglL0/rgzPzl\nYyoQUkbR+5dGfJZSKo3dUoWnrIleHkhNAnALzwIDAQABAoIBAC2c/HxUgYmoiYWF\nFwkbVAhGD+IQCZAx/PBxupZiA3dfH4HLDgasjGMiBLphsaW0VBEwL2+Cjkj0HDYB\nsO3+ZCKAryRmhYH7Net+NQq/2+Skp3atvj4VEfcQSHSJpFjpobH/gRej7VofEsmP\nJe0GTc1obt4Z8GPZ7OH0PRkv9KyBbEtVmM88H4/yXFL3N5HI4EpnZektW2yYKqzq\nkiwaqnT9ZUs/kjcJW1Vli5CzcMCExKab9zILrKDTmS4Bqz47osPEVVeCSj32PhCw\ny/F8Z22dU8lCsmSqRbxXCQLHI4F9nLorZfToyk/tGNH+LbGC7qiQEqX50IHkKzx6\nms/4LhkCgYEA4utIE6HDWaH+X/1kj4N/+WoSxLg4+3mVSCLvNTHZeVKcOOp8Mp/s\nN6gOaYetAbDdqT8sfyMT+7SIDTmYv5u8wuu3LRMXt9QSyQQGVGBaHC1++Raiz6tb\ncRd8T0ebYZd9JSPYciYL+t1bqOmaVNiLlMvY61oS8KmpAS9o/pOBnksCgYEAwIZX\nFRboNqRmgOezoz9kEPO0eWeg/XEHc6peUQM97tQbRSU33G6BH2YlphfGmkWt8Y6u\nvbYH7+B7BxX0VgXYt/MmBAQ8DQxSKsl+t19QrWS1xf5X1eyQ6OewlnoBU3cX0uaY\nEAgoodT5D/nf1i9WR2j8Ef1pBLwajjuG6hUnxg0CgYBwDjXClBAutAM0jaHaCNrq\nZIouILbq4Ahq3e14PEyjT7sblBeOvFBez5uGW1yAyEE9sZeclMrqciT5OucGP7bA\nHryPAq2ktpIsN9OUWRxGa+UWxinSGVGHkExvrfG6CJ/g9kmNXOJvmF4KFImEuoZ7\nDQrqdcmClJWDo1Da3iaU7wKBgQCDpFgvJ3aoxkkAo24FlfbKUJl62g0OvxalVD0h\nj+HtSENNSGGl7DmGSsY7h85Y9oQ1w6ZgOfO7Zfc5pR1pJJ5HSY8Y9/xHv8D/WL+4\niwgTR+Wy+HL+578+Qg5RFiOJ+sjjgKFBdRKzdXjIH8eaIMwSEAssEeaZQjW2Q6XA\nsa58kQKBgQCQ/6AeNZSfHpgnm4MKc7YCLK2oxsOwOlrHMrif6Yd7gPiaA1Ap+R6c\nHOpTkwT+3GsP+tnh2l7T7370mP+imU2K+3Tz1V/crgKqeOiPuQtq6dITdff0vBUH\niUCrltxb5I3uh8K+rE+zuLsBjrSrxwUP1trcXHhfEMSHYzxJ6Hz9Xw==\n-----END RSA PRIVATE KEY-----\n",
+    "expirationDate":"9999-12-31T23:59:59Z",
+    "userId":"305100342993885805"
+    }"#;
 
     const PERSONAL_ACCESS_TOKEN: &str =
         "dEnGhIFs3VnqcQU5D2zRSeiarB1nwH6goIKY0J8MWZbsnWcTuu1C59lW9DgCq1y096GYdXA";
+
+
+    #[derive(Debug, serde::Deserialize, serde::Serialize)]
+    pub struct CustomClaims {
+        pub name: Option<String>,
+        pub given_name: Option<String>,
+        pub family_name: Option<String>,
+        pub preferred_username: Option<String>,
+        pub email: Option<String>,
+        pub email_verified: Option<bool>,
+        pub locale: Option<String>,
+        #[serde(rename = "urn:zitadel:iam:user:resourceowner:id")]
+        pub resource_owner_id: Option<String>,
+        #[serde(rename = "urn:zitadel:iam:user:resourceowner:name")]
+        pub resource_owner_name: Option<String>,
+        #[serde(rename = "urn:zitadel:iam:user:resourceowner:primary_domain")]
+        pub resource_owner_primary_domain: Option<String>,
+        #[serde(rename = "urn:zitadel:iam:user:metadata")]
+        pub metadata: Option<HashMap<String, String>>,
+        #[serde(rename = "music")]
+        pub taste: Option<String>,
+        #[serde(rename = "year")]
+        pub anum: Option<i32>,
+     }
+
+     pub trait ExtIntrospectedUser {
+        fn custom_claims(&self) -> Result<CustomClaims, serde_json::Error>;
+     }
+     impl ExtIntrospectedUser for ZitadelIntrospectionResponse {
+         fn custom_claims(&self) -> Result<CustomClaims, serde_json::Error> {
+            let as_value = serde_json::to_value(self)?;
+             let custom_claims: CustomClaims = serde_json::from_value(as_value)?;
+            Ok(custom_claims)
+        }
+     }
 
     #[tokio::test]
     async fn introspect_fails_with_invalid_url() {
@@ -469,4 +513,31 @@ mod tests {
         assert!(!jwks.keys.is_empty());
     }
 
+    #[tokio::test]
+    async fn local_jwt_validation_succeeds() {
+        //
+        //  this use the following Action definition
+        // /**
+        //  * Add an additional claim to the token / userinfo, if it's not already present
+        //  *
+        //  * Flow: Complement token, Triggers: Pre Userinfo creation, Pre access token creation
+        //  *
+        //  * @param ctx
+        //  * @param api
+        //  */
+        // function addClaim(ctx, api) {
+        //   api.v1.claims.setClaim('year', 2025)
+        //   api.v1.claims.setClaim('music', 'funk')
+        // }
+        //
+        let jwks: JwkSet = fetch_jwks(ZITADEL_URL_ALTER).await.unwrap();
+        let sa = ServiceAccount::load_from_json(SERVICE_ACCOUNT).unwrap();
+        let access_token = sa.authenticate_with_options(ZITADEL_URL_ALTER, &AuthenticationOptions {
+          scopes: vec!["profile".to_string(), "email".to_string(), "urn:zitadel:iam:user:resourceowner".to_string()],
+           ..Default::default()
+         }).await.unwrap();
+        let result: CustomClaims = local_jwt_validation::<CustomClaims>(&ZITADEL_ISSUERS, &ZITADEL_AUDIENCES, jwks, &access_token).await.unwrap();
+        assert_eq!(result.taste.unwrap(), "funk");
+        assert_eq!(result.anum.unwrap(), 2025);
+    }
 }
