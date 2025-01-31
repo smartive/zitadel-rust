@@ -12,8 +12,14 @@ use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::error::Error;
 use std::fmt::{Debug, Display};
+use jsonwebtoken::{decode, decode_header, Algorithm, DecodingKey, Header, TokenData, Validation};
+use jsonwebtoken::jwk::{AlgorithmParameters, JwkSet};
+use std::str::FromStr;
+use reqwest::Client;
+use serde::de::DeserializeOwned;
 use serde_json::Value as JsonValue;
 use crate::credentials::{Application, ApplicationError};
+use crate::oidc::discovery::{discover, DiscoveryError};
 
 #[cfg(feature = "introspection_cache")]
 pub mod cache;
@@ -28,6 +34,16 @@ custom_error! {
         ParseResponse{source: serde_json::Error} = "could not parse introspection response: {source}",
         DecodeResponse{source: base64::DecodeError} = "could not decode base64 metadata: {source}",
         ResponseError{source: ZitadelResponseError} = "received error response from Zitadel: {source}",
+        JwksRequestFailed{source: reqwest::Error} = "could not fetch jwks keys: {source}",
+        DiscoveryError{source: DiscoveryError} = "Discovery error during introspection: {source}",
+        JWTUnsupportedAlgorithm = "unsupported algorithm in JWT",
+        MissingJwksKey = "missing key in jwks",
+        JsonWebTokenErrors{source: jsonwebtoken::errors::Error} = @{ match source.kind() {
+            jsonwebtoken::errors::ErrorKind::InvalidToken => "Invalid JWT string, missing the 3 . segments, JKWS validation won't work with opaque tokens, make sure you've switched to JWT tokens or use instead the instropect method",
+            jsonwebtoken::errors::ErrorKind::InvalidAlgorithmName => "Invalid Algorithm in JWKS",
+            _ => "Other JWT error"
+        }},
+
 }
 
 /// Introspection response information that is returned by the ZITADEL
@@ -128,7 +144,7 @@ pub struct ZitadelIntrospectionExtraTokenFields {
     #[serde(rename = "urn:zitadel:iam:user:metadata")]
     pub metadata: Option<HashMap<String, String>>,
     #[serde(flatten)]
-    custom_claims: HashMap<String, JsonValue>
+    custom_claims: Option<HashMap<String, JsonValue>>
 }
 
 impl ExtraTokenFields for ZitadelIntrospectionExtraTokenFields {}
@@ -317,6 +333,60 @@ fn decode_metadata(response: &mut ZitadelIntrospectionResponse) -> Result<(), In
     Ok(())
 }
 
+
+pub async fn fetch_jwks(idm_url: &str) -> Result<JwkSet, IntrospectionError> {
+    let client: Client = Client::new();
+    let openid_config = discover(idm_url).await.map_err(|err| {
+        IntrospectionError::DiscoveryError { source: err }
+    })?;
+    let jwks_url = openid_config.jwks_uri().url().as_ref();
+    let response = client
+        .get(jwks_url)
+        .send()
+        .await?;
+    let jwks_keys: JwkSet = response.json::<JwkSet>().await.map_err(|err| IntrospectionError::JwksRequestFailed { source: err })?;
+    Ok(jwks_keys)
+}
+
+
+pub async fn local_jwt_validation<U>(issuers: &[&str],
+                                  audiences: &[String],
+                                  jwks_keys: JwkSet,
+                                  token: &str, ) -> Result<TokenData<U>, IntrospectionError>
+
+where
+    U: DeserializeOwned,
+{
+
+    let unverified_token_header: Header = decode_header(token).map_err(|source| IntrospectionError::JsonWebTokenErrors { source })?;
+    let user_kid = match unverified_token_header.kid {
+        Some(k) => k,
+        None => return Err(IntrospectionError::MissingJwksKey),
+    };
+    if let Some(j) = jwks_keys.find(&user_kid) {
+        match &j.algorithm {
+            AlgorithmParameters::RSA(rsa) => {
+                let decoding_key = DecodingKey::from_rsa_components(&rsa.n, &rsa.e)?;
+                let algorithm_key = j.common.key_algorithm.ok_or(IntrospectionError::JWTUnsupportedAlgorithm)?;
+                let algorithm_str = format!("{}", algorithm_key);
+                let algorithm = Algorithm::from_str(&algorithm_str).map_err(|source| IntrospectionError::JsonWebTokenErrors { source })?;
+                let mut validation = Validation::new(algorithm);
+                validation.set_audience(audiences);
+                validation.leeway = 5;
+                validation.set_issuer(issuers);
+                validation.validate_exp = true;
+
+                let decoded_token: TokenData<U> = decode::<U>(token, &decoding_key, &validation).map_err(|source| IntrospectionError::JsonWebTokenErrors { source })?;
+                Ok(decoded_token)
+            }
+            _ => unreachable!("Not yet Implemented or supported by Zitadel"),
+        }
+    } else {
+        Err(IntrospectionError::MissingJwksKey)
+    }
+}
+
+
 #[cfg(test)]
 mod tests {
     #![allow(clippy::all)]
@@ -327,6 +397,8 @@ mod tests {
     use super::*;
 
     const ZITADEL_URL: &str = "https://zitadel-libraries-l8boqa.zitadel.cloud";
+    const ZITADEL_URL_ALTER: &str = "https://ferris-hk3otq.us1.zitadel.cloud";
+
     const PERSONAL_ACCESS_TOKEN: &str =
         "dEnGhIFs3VnqcQU5D2zRSeiarB1nwH6goIKY0J8MWZbsnWcTuu1C59lW9DgCq1y096GYdXA";
 
@@ -390,4 +462,11 @@ mod tests {
 
         assert!(result.active());
     }
+
+    #[tokio::test]
+    async fn fetch_jwks_succeeds() {
+        let jwks: JwkSet = fetch_jwks(ZITADEL_URL_ALTER).await.unwrap();
+        assert!(!jwks.keys.is_empty());
+    }
+
 }
