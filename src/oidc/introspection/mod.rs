@@ -12,7 +12,7 @@ use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::error::Error;
 use std::fmt::{Debug, Display};
-
+use serde_json::Value as JsonValue;
 use crate::credentials::{Application, ApplicationError};
 
 #[cfg(feature = "introspection_cache")]
@@ -86,6 +86,8 @@ pub struct ZitadelIntrospectionExtraTokenFields {
     pub project_roles: Option<HashMap<String, HashMap<String, String>>>,
     #[serde(rename = "urn:zitadel:iam:user:metadata")]
     pub metadata: Option<HashMap<String, String>>,
+    #[serde(flatten)]
+    custom_claims: HashMap<String, JsonValue>
 }
 
 impl ExtraTokenFields for ZitadelIntrospectionExtraTokenFields {}
