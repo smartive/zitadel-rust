@@ -39,11 +39,41 @@ custom_error! {
 ///   `resource_owner_` are set.
 /// - When scope contains `urn:zitadel:iam:user:metadata`, the metadata hashmap will be
 ///   filled with the user metadata.
+///  - When scope contains `urn:zitadel:iam:org:projects:roles`, the project_roles hashmap will be
+///  filled with the project roles.
+///  - When using custom claims through Zitadel Actions, the custom_claims hashmap will be filled with
+///    the custom claims. [custom claims](https://zitadel.com/docs/apis/openidoauth/claims#custom-claims)
 ///
 /// It can be used as a basis for further customized authorization checks, for example:
 /// ```
+/// use std::collections::HashMap;
 /// use zitadel::axum::introspection::IntrospectedUser;
-/// use zitadel::oidc::introspection::ZitadelIntrospectionExtraTokenFields;
+/// use zitadel::oidc::introspection::{ZitadelIntrospectionExtraTokenFields, ZitadelIntrospectionResponse};
+/// use serde_json::Error as SerdeError;
+///
+///
+/// #[derive(Debug, serde::Deserialize, serde::Serialize)]
+///  pub struct CustomClaims {
+///     pub name: Option<String>,
+///     pub given_name: Option<String>,
+///     pub family_name: Option<String>,
+///     pub preferred_username: Option<String>,
+///     pub email: Option<String>,
+///     pub email_verified: Option<bool>,
+///     pub locale: Option<String>,
+///     #[serde(rename = "urn:zitadel:iam:user:resourceowner:id")]
+///     pub resource_owner_id: Option<String>,
+///     #[serde(rename = "urn:zitadel:iam:user:resourceowner:name")]
+///     pub resource_owner_name: Option<String>,
+///     #[serde(rename = "urn:zitadel:iam:user:resourceowner:primary_domain")]
+///     pub resource_owner_primary_domain: Option<String>,
+///     #[serde(rename = "urn:zitadel:iam:user:metadata")]
+///     pub metadata: Option<HashMap<String, String>>,
+///     #[serde(rename = "my:zitadel:grants")]
+///     pub flat_roles: Option<Vec<String>>,
+///     #[serde(rename = "year")]
+///     pub anum: Option<String>,
+/// }
 ///
 /// enum Role {
 ///   Admin,
@@ -64,6 +94,17 @@ custom_error! {
 ///             .and_then(|roles| roles.get(role))
 ///             .map(|org_ids| org_ids.contains_key(org_id))
 ///             .unwrap_or(false)
+///     }
+/// }
+///
+/// pub trait ExtIntrospectedUser {
+///     fn custom_claims(&self) -> Result<CustomClaims, SerdeError>;
+/// }
+/// impl ExtIntrospectedUser for ZitadelIntrospectionResponse {
+///     fn custom_claims(&self) -> Result<CustomClaims, SerdeError> {
+///         let as_value = serde_json::to_value(self)?;
+///         let custom_claims: CustomClaims = serde_json::from_value(as_value)?;
+///         Ok(custom_claims)
 ///     }
 /// }
 /// ```
