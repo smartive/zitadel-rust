@@ -411,6 +411,8 @@ mod tests {
     const PERSONAL_ACCESS_TOKEN: &str =
         "dEnGhIFs3VnqcQU5D2zRSeiarB1nwH6goIKY0J8MWZbsnWcTuu1C59lW9DgCq1y096GYdXA";
 
+    const PERSONAL_ACCESS_TOKEN_ALTER : &str =
+        "KyX1Pw1bVfYFSE0g6s3Io12I4sC-feEtkaShWstZJ0h34JHfE29q4oIOJFF0PZlfMDvaCvk";
 
     #[derive(Debug, serde::Deserialize, serde::Serialize)]
     pub struct CustomClaims {
@@ -539,5 +541,33 @@ mod tests {
         let result: CustomClaims = local_jwt_validation::<CustomClaims>(&ZITADEL_ISSUERS, &ZITADEL_AUDIENCES, jwks, &access_token).await.unwrap();
         assert_eq!(result.taste.unwrap(), "funk");
         assert_eq!(result.anum.unwrap(), 2025);
+    }
+
+    #[tokio::test]
+    async fn introspect_custom_claims_succeeds() {
+        let meta = discover(ZITADEL_URL_ALTER).await.unwrap();
+        let result = introspect(
+            &meta
+                .additional_metadata()
+                .introspection_endpoint
+                .as_ref()
+                .unwrap()
+                .to_string(),
+            ZITADEL_URL_ALTER,
+            &AuthorityAuthentication::Basic {
+                client_id: "305507367414524812".to_string(),
+                client_secret: "hmXmOdeviMGkGYaiIh4PepElr8jgrCdwewfvnkfy1TugbwCodiflqFdH7Yfs7Ody"
+                    .to_string(),
+            },
+            PERSONAL_ACCESS_TOKEN_ALTER,
+        )
+            .await
+            .unwrap();
+
+        let custom_claims = result.custom_claims().unwrap();
+
+        assert!(result.active());
+        assert_eq!(custom_claims.taste.unwrap(), "funk");
+        assert_eq!(custom_claims.anum.unwrap(), 2025);
     }
 }
