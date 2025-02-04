@@ -2,4 +2,6 @@
 Cargo.lock
 temp*
 src/api/generated
+crates/zitadel-gen/proto
+crates/zitadel-gen/src/api
 .idea
