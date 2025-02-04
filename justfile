@@ -47,32 +47,31 @@ protoc_gen_openapiv2-fetch-protos:
 all_examples:
     # fetch_profile_with_pat
     cargo run -p zitadel-examples --example fetch_profile_with_pat \
-      --features "zitadel/api zitadel/interceptors" --release
+      --features "zitadel/api zitadel/interceptors tokio" --release
 
     # fetch_profile_with_service_account
     cargo run -p zitadel-examples --example fetch_profile_with_service_account \
-      --features "zitadel/api zitadel/interceptors" --release
+      --features "zitadel/api zitadel/interceptors tokio" --release
 
     # actix_webapi_oauth_interception_basic
     cargo run -p zitadel-examples --example actix_webapi_oauth_interception_basic \
-      --features "zitadel/actix" --release
+      --features "actix" --release
 
     # axum_webapi_oauth_interception_basic
     cargo run -p zitadel-examples --example axum_webapi_oauth_interception_basic \
-      --features "zitadel/axum" --release
+      --features "axum" --release
 
     # rocket_webapi_oauth_interception_basic
     cargo run -p zitadel-examples --example rocket_webapi_oauth_interception_basic \
-      --features "zitadel/rocket" --release
+      --features "rocket" --release
 
     # rocket_webapi_oauth_interception_jwtprofile_cached
     cargo run -p zitadel-examples --example rocket_webapi_oauth_interception_jwtprofile_cached \
-      --features "zitadel/rocket zitadel/introspection_cache" --release
+      --features "rocket zitadel/introspection_cache" --release
 
     # rocket_webapi_oauth_interception_jwtprofile
     cargo run -p zitadel-examples --example rocket_webapi_oauth_interception_jwtprofile \
-      --features "zitadel/rocket" --release
+      --features "rocket" --release
 
     # service_account_authentication
-    cargo run -p zitadel-examples --example service_account_authentication \
-      --features "zitadel/credentials" --release
+    cargo run -p zitadel-examples --example service_account_authentication --features "zitadel/credentials tokio" --release
