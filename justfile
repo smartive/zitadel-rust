@@ -1,4 +1,5 @@
 proto_dir := "./crates/zitadel-gen/src/api/"
+gen_dir := "./crates/zitadel-gen"
 zitadel_proto_version := "v2.69.1"
 
 
@@ -10,9 +11,12 @@ clean:
 generate-grpc:
     buf generate https://github.com/zitadel/zitadel.git#tag={{zitadel_proto_version}} --path ./proto/zitadel
 
+build_zitadel-grpc:
+    cargo set-version --package zitadel-gen `echo {{zitadel_proto_version}} | sed 's/^v//'`
+    cargo build --package zitadel-gen --release
 
 install-tools:
-    cargo install protoc-gen-prost protoc-gen-tonic protoc-gen-prost-crate protoc-gen-prost-serde
+    cargo install protoc-gen-prost protoc-gen-tonic protoc-gen-prost-crate protoc-gen-prost-serde cargo-edit
 
 all_examples:
     # fetch_profile_with_pat

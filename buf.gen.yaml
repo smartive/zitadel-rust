@@ -18,5 +18,5 @@ plugins:
     out: ./crates/zitadel-gen
     strategy: all
     opt:
-      - gen_crate=crates/zitadel-gen/Cargo.toml
-      - include_file=crates/zitadel-gen/src/api/mod.rs
+      - gen_crate=./crates/zitadel-gen/Cargo.toml
+      - include_file=src/api/mod.rs
