@@ -3,5 +3,8 @@ Cargo.lock
 temp*
 src/api/generated
 crates/zitadel-gen/proto
-crates/zitadel-gen/src/api
+crates/zitadel-gen/src/api/google.api.rs
+crates/zitadel-gen/src/api/grpc.gateway.protoc_gen_openapiv2.options.rs
+crates/zitadel-gen/src/api/validate.rs
+crates/zitadel-gen/src/api/zitadel.**.rs
 .idea
