@@ -11,6 +11,8 @@ zitadel_proto_version := "v2.69.1"
 
 default: clean create-dirs googleapis-fetch-protos protoc_gen_openapiv2-fetch-protos buf_valitator_fetch zitadel-fetch-protos
 
+generate-grpc: create-dirs googleapis-fetch-protos protoc_gen_openapiv2-fetch-protos buf_valitator_fetch zitadel-fetch-protos
+
 clean:
     @rm -rf {{source_proto_dir}}
 

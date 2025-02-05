@@ -11,29 +11,19 @@ The following features are present:
 
 ### Example
 
-There exist a few examples in the `examples` directory.
+There exist a few examples in the `zitadel-examples` crate.
 Go there to see the library in action, or head over to the
 [documentation](https://docs.rs/zitadel/latest/zitadel/) to see the full API documentation.
 
-### Development
+### Compatibility Matrix
 
-After you clone the repository, you need ["just"](https://just.systems) to run
-certain tasks. Generating the gRPC clients is done via `just generate-grpc` or `just`
-(as it is configured to be the default action for just).
+| ZITADEL Version | Rust Version | zitadel-rust Version | zitadel-gen Version |
+|-----------------|--------------|----------------------|---------------------|
+| 2.69.1          | 1.80.0+      | 5.5.2                | 2.69.1              |
 
-For the generation to complete successfully, you need to have ["buf"](https://buf.build)
-and the required proto plugins installed.
-
-Required tooling:
-
-- [just](https://just.systems)
-- [buf](https://buf.build)
-- [protoc](https://grpc.io/docs/protoc-installation/)
-- `protoc-gen-prost`: `cargo install protoc-gen-prost`
-- `protoc-gen-tonic`: `cargo install protoc-gen-tonic`
-- `protoc-gen-prost-crate`: `cargo install protoc-gen-prost-crate`
-
-Installing the tools is also partially available via `just install-tools`.
+Starting from 5.5.2, the crate zitadel-gen is reponsible to generate the code for the API clients.
+The generated code is then used by the zitadel crate to provide a more idiomatic Rust API.
+The zitadel-gen version is alaways the same as the ZITADEL version (SemVer).
 
 #### License
 
@@ -44,3 +34,8 @@ Unless you explicitly state otherwise, any contribution intentionally submitted
 for inclusion in the package by you, as defined in the Apache-2.0 license, shall be
 dual licensed as above, without any additional terms or conditions.
 </sup>
+
+#### Thanks and Acknowledgements
+
+This project is supported by [Christoph Bühler from smartive.ch](https://smartive.ch) and the crates owns him 99% of the hard work.
+Thanks also to all notable contributors and the ZITADEL team for their support and feedback.

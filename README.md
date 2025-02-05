@@ -11,29 +11,31 @@ The following features are present:
 
 ### Example
 
-There exist a few examples in the `examples` directory.
+There exist a few examples in the `zitadel-examples` crate.
 Go there to see the library in action, or head over to the
 [documentation](https://docs.rs/zitadel/latest/zitadel/) to see the full API documentation.
+
+### Compatibility Matrix
+
+| ZITADEL Version | Rust Version | zitadel-rust Version | zitadel-gen Version |
+|-----------------|--------------|----------------------|---------------------|
+| 2.69.1          | 1.80.0+      | 5.5.2                | 2.69.1              |
 
 ### Development
 
 After you clone the repository, you need ["just"](https://just.systems) to run
-certain tasks. Generating the gRPC clients is done via `just generate-grpc` or `just`
+certain tasks. 
+Generating the gRPC clients is done via `just generate-grpc` or `just`
 (as it is configured to be the default action for just).
 
-For the generation to complete successfully, you need to have ["buf"](https://buf.build)
-and the required proto plugins installed.
+For the generation to complete successfully, you  need to have the required tools installed.
 
 Required tooling:
 
 - [just](https://just.systems)
-- [buf](https://buf.build)
-- [protoc](https://grpc.io/docs/protoc-installation/)
-- `protoc-gen-prost`: `cargo install protoc-gen-prost`
-- `protoc-gen-tonic`: `cargo install protoc-gen-tonic`
-- `protoc-gen-prost-crate`: `cargo install protoc-gen-prost-crate`
+- [rust](https://www.rust-lang.org/)
 
-Installing the tools is also partially available via `just install-tools`.
+
 
 #### License
 
