@@ -28,15 +28,19 @@ certain tasks.
 Generating the gRPC clients is done via `just generate-grpc` or `just`
 (as it is configured to be the default action for just).
 
-For the generation to complete successfully, you  need to have the required tools installed.
+For the generation to complete successfully, you need to have ["buf"](https://buf.build)
+and the required proto plugins installed.
 
 Required tooling:
 
 - [just](https://just.systems)
-- [rust](https://www.rust-lang.org/)
+- [buf](https://buf.build)
+- [protoc](https://grpc.io/docs/protoc-installation/)
+- `protoc-gen-prost`: `cargo install protoc-gen-prost`
+- `protoc-gen-tonic`: `cargo install protoc-gen-tonic`
+- `protoc-gen-prost-crate`: `cargo install protoc-gen-prost-crate`
 
-
-
+Installing the tools is also partially available via `just install-tools`.
 #### License
 
 <sup>

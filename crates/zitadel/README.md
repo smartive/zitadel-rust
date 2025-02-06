@@ -21,9 +21,9 @@ Go there to see the library in action, or head over to the
 |-----------------|--------------|----------------------|---------------------|
 | 2.69.1          | 1.80.0+      | 5.5.2                | 2.69.1              |
 
-Starting from 5.5.2, the crate zitadel-gen is reponsible to generate the code for the API clients.
+Starting from 5.5.2, the crate zitadel-gen is responsible to generate the code for the API clients.
 The generated code is then used by the zitadel crate to provide a more idiomatic Rust API.
-The zitadel-gen version is alaways the same as the ZITADEL version (SemVer).
+The zitadel-gen version should always be the same as the ZITADEL version (SemVer).
 
 #### License
 
