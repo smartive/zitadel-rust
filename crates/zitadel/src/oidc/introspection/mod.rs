@@ -1,12 +1,8 @@
 use custom_error::custom_error;
-use openidconnect::http::Method;
-use openidconnect::reqwest::async_http_client;
 use openidconnect::url::{ParseError, Url};
-use openidconnect::HttpResponse;
 use openidconnect::{
-    core::CoreTokenType, ExtraTokenFields, HttpRequest, StandardTokenIntrospectionResponse,
+    core::CoreTokenType, ExtraTokenFields, StandardTokenIntrospectionResponse,
 };
-
 use reqwest::header::{HeaderMap, ACCEPT, AUTHORIZATION, CONTENT_TYPE};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
@@ -15,7 +11,7 @@ use std::fmt::{Debug, Display};
 use jsonwebtoken::{decode, decode_header, Algorithm, DecodingKey, Header, TokenData, Validation};
 use jsonwebtoken::jwk::{AlgorithmParameters, JwkSet};
 use std::str::FromStr;
-use reqwest::Client;
+use reqwest::{Client};
 use serde::de::DeserializeOwned;
 use serde_json::Value as JsonValue;
 use crate::credentials::{Application, ApplicationError};
@@ -27,14 +23,14 @@ pub mod cache;
 custom_error! {
     /// Error type for introspection related errors.
     pub IntrospectionError
-        RequestFailed{source: openidconnect::reqwest::Error<reqwest::Error>} = "the introspection request did fail: {source}",
+        HttpClientError{source: reqwest::Error} = "could not create http client: {source}",
+        RequestFailed{origin: String, source: openidconnect::reqwest::Error} = "{origin} request did fail: {source}",
         PayloadSerialization = "could not correctly serialize introspection payload",
         JWTProfile{source: ApplicationError} = "could not create signed jwt key: {source}",
         ParseUrl{source: ParseError} = "could not parse url: {source}",
         ParseResponse{source: serde_json::Error} = "could not parse introspection response: {source}",
         DecodeResponse{source: base64::DecodeError} = "could not decode base64 metadata: {source}",
         ResponseError{source: ZitadelResponseError} = "received error response from Zitadel: {source}",
-        JwksRequestFailed{source: reqwest::Error} = "could not fetch jwks keys: {source}",
         DiscoveryError{source: DiscoveryError} = "Discovery error during introspection: {source}",
         JWTUnsupportedAlgorithm = "unsupported algorithm in JWT",
         MissingJwksKey = "missing key in jwks",
@@ -273,24 +269,29 @@ pub async fn introspect(
     authentication: &AuthorityAuthentication,
     token: &str,
 ) -> Result<ZitadelIntrospectionResponse, IntrospectionError> {
-    let response = async_http_client(HttpRequest {
-        url: Url::parse(introspection_uri)
-            .map_err(|source| IntrospectionError::ParseUrl { source })?,
-        method: Method::POST,
-        headers: headers(authentication),
-        body: payload(authority, authentication, token)?.into_bytes(),
-    })
-    .await
-    .map_err(|source| IntrospectionError::RequestFailed { source })?;
+    let async_http_client = reqwest::ClientBuilder::new().redirect(reqwest::redirect::Policy::none()).build()?;
 
-    if !response.status_code.is_success() {
+    let url= Url::parse(introspection_uri)
+            .map_err(|source| IntrospectionError::ParseUrl { source })?;
+    let response = async_http_client
+        .post(url)
+        .headers(headers(authentication))
+        .body(payload(authority, authentication, token)?)
+        .send()
+        .await
+        .map_err(|source| IntrospectionError::RequestFailed {origin: "The introspection".to_string(),  source })?;
+
+    if !response.status().is_success() {
+        let status = response.status();
+        let body_bytes = response.bytes().await?;
+
         return Err(IntrospectionError::ResponseError {
-            source: ZitadelResponseError::from_response(&response),
+            source: ZitadelResponseError::new(status, &body_bytes),
         });
     }
 
     let mut response: ZitadelIntrospectionResponse =
-        serde_json::from_slice(response.body.as_slice())
+        serde_json::from_slice(response.bytes().await?.to_vec().as_slice())
             .map_err(|source| IntrospectionError::ParseResponse { source })?;
     decode_metadata(&mut response)?;
     Ok(response)
@@ -302,13 +303,14 @@ struct ZitadelResponseError {
     body: String,
 }
 impl ZitadelResponseError {
-    fn from_response(response: &HttpResponse) -> Self {
-        Self {
-            status_code: response.status_code.to_string(),
-            body: String::from_utf8_lossy(response.body.as_slice()).to_string(),
+        fn new(status_code: reqwest::StatusCode, body: &[u8]) -> Self {
+            Self {
+                status_code: status_code.to_string(),
+                body: String::from_utf8_lossy(body).to_string(),
+            }
         }
-    }
 }
+
 impl Display for ZitadelResponseError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "status code: {}, body: {}", self.status_code, self.body)
@@ -344,7 +346,7 @@ pub async fn fetch_jwks(idm_url: &str) -> Result<JwkSet, IntrospectionError> {
         .get(jwks_url)
         .send()
         .await?;
-    let jwks_keys: JwkSet = response.json::<JwkSet>().await.map_err(|err| IntrospectionError::JwksRequestFailed { source: err })?;
+    let jwks_keys: JwkSet = response.json::<JwkSet>().await.map_err(|err| IntrospectionError::RequestFailed {origin: "Could not fetch jwks keys because ".to_string(), source: err })?;
     Ok(jwks_keys)
 }
 

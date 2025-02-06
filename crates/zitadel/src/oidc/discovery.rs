@@ -1,10 +1,9 @@
 use custom_error::custom_error;
-use openidconnect::reqwest::async_http_client;
 use openidconnect::{
     core::{
         CoreAuthDisplay, CoreClaimName, CoreClaimType, CoreClientAuthMethod, CoreGrantType,
-        CoreJsonWebKey, CoreJsonWebKeyType, CoreJsonWebKeyUse, CoreJweContentEncryptionAlgorithm,
-        CoreJweKeyManagementAlgorithm, CoreJwsSigningAlgorithm, CoreResponseMode, CoreResponseType,
+        CoreJsonWebKey, CoreJweContentEncryptionAlgorithm,
+        CoreJweKeyManagementAlgorithm, CoreResponseMode, CoreResponseType,
         CoreSubjectIdentifierType,
     },
     url, AdditionalProviderMetadata, IntrospectionUrl, IssuerUrl, ProviderMetadata, RevocationUrl,
@@ -16,6 +15,7 @@ custom_error! {
     pub DiscoveryError
         IssuerUrl{source: url::ParseError} = "could not parse issuer url: {source}",
         DiscoveryDocument = "could not discover OIDC document",
+        DiscoveryClientError{source: reqwest::Error} = "could not fetch discovery document: {source}",
 }
 
 /// Fetch the well-known [OIDC Discovery](https://openid.net/specs/openid-connect-discovery-1_0.html)
@@ -50,7 +50,8 @@ custom_error! {
 pub async fn discover(authority: &str) -> Result<ZitadelProviderMetadata, DiscoveryError> {
     let issuer = IssuerUrl::new(authority.to_string())
         .map_err(|source| DiscoveryError::IssuerUrl { source })?;
-    ZitadelProviderMetadata::discover_async(issuer, async_http_client)
+    let async_http_client = reqwest::ClientBuilder::new().redirect(reqwest::redirect::Policy::none()).build()?;
+    ZitadelProviderMetadata::discover_async(issuer, &async_http_client)
         .await
         .map_err(|_| DiscoveryError::DiscoveryDocument)
 }
@@ -77,6 +78,22 @@ pub type ZitadelProviderMetadata = ProviderMetadata<
     CoreGrantType,
     CoreJweContentEncryptionAlgorithm,
     CoreJweKeyManagementAlgorithm,
+    CoreJsonWebKey,
+    CoreResponseMode,
+    CoreResponseType,
+    CoreSubjectIdentifierType,
+>;
+
+/*
+pub type ZitadelProviderMetadata = ProviderMetadata<
+    ZitadelAdditionalMetadata,
+    CoreAuthDisplay,
+    CoreClientAuthMethod,
+    CoreClaimName,
+    CoreClaimType,
+    CoreGrantType,
+    CoreJweContentEncryptionAlgorithm,
+    CoreJweKeyManagementAlgorithm,
     CoreJwsSigningAlgorithm,
     CoreJsonWebKeyType,
     CoreJsonWebKeyUse,
@@ -85,6 +102,7 @@ pub type ZitadelProviderMetadata = ProviderMetadata<
     CoreResponseType,
     CoreSubjectIdentifierType,
 >;
+ */
 
 #[cfg(test)]
 mod tests {
