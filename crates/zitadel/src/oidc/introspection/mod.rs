@@ -54,9 +54,9 @@ custom_error! {
 /// - When scope contains `urn:zitadel:iam:user:resourceowner`, the fields prefixed with
 ///   `resource_owner_` are set.
 /// - When scope contains `urn:zitadel:iam:user:metadata`, the metadata hashmap will be
-///   filled with the user metadata.
+///    filled with the user metadata.
 ///  - When scope contains `urn:zitadel:iam:org:projects:roles`, the project_roles hashmap will be
-///  filled with the project roles.
+///    filled with the project roles.
 ///  - When using custom claims through Zitadel Actions, the custom_claims hashmap will be filled with
 ///    the custom claims. [custom claims](https://zitadel.com/docs/apis/openidoauth/claims#custom-claims)
 ///
