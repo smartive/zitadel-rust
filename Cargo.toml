@@ -3,7 +3,6 @@ resolver = "2"
 members = [
     "crates/zitadel",
     "crates/zitadel-gen",
-    "crates/zitadel-examples",
 ]
 
 [workspace.package]
