@@ -148,12 +148,12 @@ path = "examples/axum_webapi_oauth_interception_basic.rs"
 
 [[example]]
 name = "fetch_profile_with_pat"
-required-features = ["zitadel/api", "zitadel/interceptors" , "tokio"]
+required-features = ["api", "interceptors"]
 path = "examples/fetch_profile_with_pat.rs"
 
 [[example]]
 name = "fetch_profile_with_service_account"
-required-features = ["zitadel/api", "zitadel/interceptors", "tokio"]
+required-features = ["api", "interceptors"]
 path = "examples/fetch_profile_with_service_account.rs"
 
 [[example]]
@@ -163,7 +163,7 @@ path = "examples/rocket_webapi_oauth_interception_basic.rs"
 
 [[example]]
 name = "rocket_webapi_oauth_interception_jwtprofile_cached"
-required-features = ["rocket", "zitadel/introspection_cache"]
+required-features = ["rocket", "introspection_cache"]
 path = "examples/rocket_webapi_oauth_interception_jwtprofile_cached.rs"
 
 [[example]]
@@ -173,6 +173,6 @@ path = "examples/rocket_webapi_oauth_interception_jwtprofile.rs"
 
 [[example]]
 name = "service_account_authentication"
-required-features = ["zitadel/credentials" , "tokio"]
+required-features = ["credentials"]
 path = "examples/service_account_authentication.rs"
 
