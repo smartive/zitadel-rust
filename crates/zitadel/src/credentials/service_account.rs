@@ -3,12 +3,11 @@ use jsonwebtoken::{encode, Algorithm, EncodingKey, Header};
 use openidconnect::{
     core::{CoreProviderMetadata, CoreTokenType},
     http::HeaderMap,
-    reqwest::async_http_client,
-    EmptyExtraTokenFields, HttpRequest, IssuerUrl, OAuth2TokenResponse, StandardTokenResponse,
+    EmptyExtraTokenFields, IssuerUrl, OAuth2TokenResponse, StandardTokenResponse,
 };
 use reqwest::{
     header::{ACCEPT, CONTENT_TYPE},
-    Method, Url,
+    Url,
 };
 use serde::{Deserialize, Serialize};
 use std::fs::read_to_string;
@@ -73,7 +72,7 @@ custom_error! {
         AudienceUrl{source: openidconnect::url::ParseError} = "audience url could not be parsed: {source}",
         DiscoveryError{source: Box<dyn std::error::Error>} = "could not discover OIDC document: {source}",
         TokenEndpointMissing = "OIDC document does not contain token endpoint",
-        HttpError{source: openidconnect::reqwest::Error<reqwest::Error>} = "http error: {source}",
+        HttpError{source: openidconnect::reqwest::Error} = "http error: {source}",
         UrlEncodeError = "could not encode url params for token request",
         TokenError = "could not fetch token from endpoint",
         AccessTokenMissing = "token response does not contain access token",
@@ -238,7 +237,8 @@ impl ServiceAccount {
     ) -> Result<String, ServiceAccountError> {
         let issuer = IssuerUrl::new(audience.to_string())
             .map_err(|e| ServiceAccountError::AudienceUrl { source: e })?;
-        let metadata = CoreProviderMetadata::discover_async(issuer, async_http_client)
+        let async_http_client = reqwest::ClientBuilder::new().redirect(reqwest::redirect::Policy::none()).build()?;
+        let metadata = CoreProviderMetadata::discover_async(issuer, &async_http_client)
             .await
             .map_err(|e| ServiceAccountError::DiscoveryError {
                 source: Box::new(e),
@@ -263,16 +263,17 @@ impl ServiceAccount {
 
         let url =
             Url::parse(url.as_str()).map_err(|_| ServiceAccountError::TokenEndpointMissing)?;
-        let response = async_http_client(HttpRequest {
-            url,
-            method: Method::POST,
-            headers,
-            body: body.into_bytes(),
-        })
-        .await
-        .map_err(|e| ServiceAccountError::HttpError { source: e })?;
+        // let response = async_http_client(HttpRequest {
+        //     url,
+        //     method: Method::POST,
+        //     headers,
+        //     body: body.into_bytes(),
+        // })
+        // .await
+        // .map_err(|e| ServiceAccountError::HttpError { source: e })?;
+        let response = async_http_client.post(url).headers(headers).body(body).send().await?;
 
-        serde_json::from_slice(response.body.as_slice())
+        serde_json::from_slice(response.bytes().await?.to_vec().as_slice())
             .map_err(|e| ServiceAccountError::Json { source: e })
             .map(
                 |response: StandardTokenResponse<EmptyExtraTokenFields, CoreTokenType>| {
