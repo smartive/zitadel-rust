@@ -534,12 +534,14 @@ mod tests {
         //   api.v1.claims.setClaim('music', 'funk')
         // }
         //
-        let jwks: JwkSet = fetch_jwks(ZITADEL_URL_ALTER).await.unwrap();
+
         let sa = ServiceAccount::load_from_json(SERVICE_ACCOUNT).unwrap();
         let access_token = sa.authenticate_with_options(ZITADEL_URL_ALTER, &AuthenticationOptions {
           scopes: vec!["profile".to_string(), "email".to_string(), "urn:zitadel:iam:user:resourceowner".to_string()],
            ..Default::default()
          }).await.unwrap();
+        // move fetch_jwks after login has jwks can be purged after 30 hours of no login
+        let jwks: JwkSet = fetch_jwks(ZITADEL_URL_ALTER).await.unwrap();
         let result: CustomClaims = local_jwt_validation::<CustomClaims>(&ZITADEL_ISSUERS, &ZITADEL_AUDIENCES, jwks, &access_token).await.unwrap();
         assert_eq!(result.taste.unwrap(), "funk");
         assert_eq!(result.anum.unwrap(), 2025);
