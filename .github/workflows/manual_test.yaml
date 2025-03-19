@@ -1,0 +1,27 @@
+name: Test Package Manually
+
+on: workflow_dispatch
+
+jobs:
+  lint_and_test:
+    name: Linting and Testing
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions-rust-lang/setup-rust-toolchain@v1
+        with:
+          components: rustfmt, clippy
+      - uses: bufbuild/buf-setup-action@v1
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+      - uses: extractions/setup-just@v2
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+      - uses: arduino/setup-protoc@v1
+        with:
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
+      - run: cargo install protoc-gen-prost protoc-gen-prost-crate protoc-gen-tonic
+      - name: generated grpc code
+        run: just
+      - run: cargo clippy --all-features --no-deps
+      - run: cargo test --all-features
