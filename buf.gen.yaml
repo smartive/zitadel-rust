@@ -4,19 +4,19 @@ managed:
   enabled: true
 plugins:
   - plugin: prost
-    out: src/api/generated
+    out: crates/zitadel-gen/src/api/
     opt:
       - compile_well_known_types
       - extern_path=.google.protobuf=::pbjson_types
   - plugin: tonic
-    out: src/api/generated
+    out: crates/zitadel-gen/src/api/
     opt:
       - compile_well_known_types
       - extern_path=.google.protobuf=::pbjson_types
       - no_server
   - name: prost-crate
-    out: .
+    out: ./crates/zitadel-gen
     strategy: all
     opt:
-      - gen_crate
-      - include_file=src/api/generated/mod.rs
+      - gen_crate=./crates/zitadel-gen/Cargo.toml
+      - include_file=src/api/mod.rs
