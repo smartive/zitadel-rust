@@ -1,4 +1,5 @@
 
+#[allow(clippy::all)]
 pub mod api;
 
 #[allow(clippy::all)]
