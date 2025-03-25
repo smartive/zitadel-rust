@@ -66,9 +66,9 @@ pbjson-types = { version = "0.7.0"}
 prost = { version = "0.13.1", default-features = false, features = ["std"] }
 prost-types = { version = "0.13.1", default-features = false }
 regex = { version = "1.5.5", default-features = false }
-tonic = "0.12.0"
+tonic = "0.13.0"
 
 [build-dependencies]
-tonic-build = "0.12.0"
+tonic-build = "0.13.0"
 prost-build = { version = "0.13.1", default-features = false }
 pbjson-build = "0.7.0"
