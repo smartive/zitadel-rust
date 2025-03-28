@@ -20,7 +20,6 @@ use rocket_okapi::{
 #[cfg(feature = "rocket_okapi")]
 use schemars::schema::{InstanceType, ObjectValidation, Schema, SchemaObject};
 #[cfg(feature = "rocket_okapi")]
-
 use crate::oidc::introspection::{introspect, IntrospectionError, ZitadelIntrospectionResponse};
 use crate::rocket::introspection::IntrospectionConfig;
 
