@@ -1,5 +1,4 @@
 use std::collections::HashMap;
-use std::fmt::Debug;
 
 use crate::axum::introspection::IntrospectionState;
 use axum::http::StatusCode;
@@ -13,10 +12,9 @@ use axum_extra::headers::authorization::Bearer;
 use axum_extra::headers::Authorization;
 use axum_extra::TypedHeader;
 use custom_error::custom_error;
-use openidconnect::TokenIntrospectionResponse;
 use serde_json::json;
 
-use crate::oidc::introspection::{introspect, IntrospectionError, ZitadelIntrospectionResponse};
+use crate::oidc::introspection::{claims::ZitadelClaims, introspect, IntrospectionError};
 
 custom_error! {
     /// Error type for guard related errors.
@@ -54,61 +52,31 @@ impl IntoResponse for IntrospectionGuardError {
     }
 }
 
-/// Struct for the extracted user. The extracted user will always be valid, when fetched in a
-/// request function arguments. If not the api will return with an appropriate error.
+/// Type alias for the extracted user.
+/// 
+/// The extracted user will always be valid when fetched in request function arguments.
+/// If not, the API will return with an appropriate error.
 ///
-/// It can be used as a basis for further customized authorization checks with a custom extractor
-/// or an extension trait.
+/// # Example
 ///
 /// ```
 /// use axum::http::StatusCode;
 /// use axum::response::IntoResponse;
 /// use zitadel::axum::introspection::IntrospectedUser;
 ///
-/// enum Role {
-///   Admin,
-///   Client
-/// }
-///
 /// async fn my_handler(user: IntrospectedUser) -> impl IntoResponse {
-///     if !user.has_role(Role::Admin, "MY-ORG-ID") {
+///     if !user.has_role("admin") {
 ///        return StatusCode::FORBIDDEN.into_response();
 ///     }
+///     
+///     if user.has_role_in_project("project123", "editor") {
+///         return "Hello Editor".into_response();
+///     }
+///     
 ///     "Hello Admin".into_response()
 /// }
-///
-/// trait MyAuthorizationChecks {
-///     fn has_role(&self, role: Role, org_id: &str) -> bool;
-/// }
-///
-/// impl MyAuthorizationChecks for IntrospectedUser {
-///     fn has_role(&self, role: Role, org_id: &str) -> bool {
-///         let role = match role {
-///             Role::Admin => "Admin",
-///             Role::Client => "Client",
-///         };
-///         self.project_roles.as_ref()
-///             .and_then(|roles| roles.get(role))
-///             .map(|org_ids| org_ids.contains_key(org_id))
-///             .unwrap_or(false)
-///     }
-/// }
 /// ```
-#[derive(Debug)]
-pub struct IntrospectedUser {
-    /// UserID of the introspected user (OIDC Field "sub").
-    pub user_id: String,
-    pub username: Option<String>,
-    pub name: Option<String>,
-    pub given_name: Option<String>,
-    pub family_name: Option<String>,
-    pub preferred_username: Option<String>,
-    pub email: Option<String>,
-    pub email_verified: Option<bool>,
-    pub locale: Option<String>,
-    pub project_roles: Option<HashMap<String, HashMap<String, String>>>,
-    pub metadata: Option<HashMap<String, String>>,
-}
+pub type IntrospectedUser = ZitadelClaims;
 
 impl<S> FromRequestParts<S> for IntrospectedUser
 where
@@ -166,36 +134,16 @@ where
         )
         .await;
 
-        let user: Result<IntrospectedUser, IntrospectionGuardError> = match res {
-            Ok(res) => match res.active() {
-                true if res.sub().is_some() => Ok(res.into()),
-                false => Err(IntrospectionGuardError::Inactive),
-                _ => Err(IntrospectionGuardError::NoUserId),
-            },
-            Err(source) => return Err(IntrospectionGuardError::Introspection { source }),
-        };
+        let claims = res.map_err(|source| IntrospectionGuardError::Introspection { source })?;
 
-        user
-    }
-}
-
-impl From<ZitadelIntrospectionResponse> for IntrospectedUser {
-    fn from(response: ZitadelIntrospectionResponse) -> Self {
-        Self {
-            user_id: response.sub().unwrap().to_string(),
-            username: response.username().map(|s| s.to_string()),
-            name: response.extra_fields().name.clone(),
-            given_name: response.extra_fields().given_name.clone(),
-            family_name: response.extra_fields().family_name.clone(),
-            preferred_username: response.extra_fields().preferred_username.clone(),
-            email: response.extra_fields().email.clone(),
-            email_verified: response.extra_fields().email_verified,
-            locale: response.extra_fields().locale.clone(),
-            project_roles: response.extra_fields().project_roles.clone(),
-            metadata: response.extra_fields().metadata.clone(),
+        if claims.sub.is_empty() {
+            return Err(IntrospectionGuardError::NoUserId);
         }
+
+        Ok(claims)
     }
 }
+
 
 #[cfg(test)]
 mod tests {
@@ -229,7 +177,7 @@ mod tests {
     async fn authed(user: IntrospectedUser) -> impl IntoResponse {
         format!(
             "Hello authorized user: {:?} with id {}",
-            user.username, user.user_id
+            user.username, user.sub
         )
     }
 
@@ -362,7 +310,6 @@ mod tests {
         use super::*;
         use crate::oidc::introspection::cache::in_memory::InMemoryIntrospectionCache;
         use crate::oidc::introspection::cache::IntrospectionCache;
-        use crate::oidc::introspection::ZitadelIntrospectionExtraTokenFields;
         use chrono::{TimeDelta, Utc};
         use http_body_util::BodyExt;
         use std::ops::Add;
@@ -393,12 +340,17 @@ mod tests {
             let cache = Arc::new(InMemoryIntrospectionCache::default());
             let app = app_witch_cache(cache.clone()).await;
 
-            let mut res = ZitadelIntrospectionResponse::new(
-                true,
-                ZitadelIntrospectionExtraTokenFields::default(),
-            );
-            res.set_sub(Some("cached_sub".to_string()));
-            res.set_exp(Some(Utc::now().add(TimeDelta::days(1))));
+            use crate::oidc::introspection::claims::ZitadelClaims;
+            let res = ZitadelClaims {
+                sub: "cached_sub".to_string(),
+                iss: "https://test.zitadel.cloud".to_string(),
+                aud: vec!["test".to_string()],
+                username: Some("cached_user".to_string()),
+                exp: Utc::now().add(TimeDelta::days(1)).timestamp(),
+                iat: Utc::now().timestamp(),
+                active: true,
+                ..Default::default()
+            };
             cache.set(PERSONAL_ACCESS_TOKEN, res).await;
 
             let response = app
@@ -454,7 +406,7 @@ mod tests {
 
             let cached_response = cache.get(PERSONAL_ACCESS_TOKEN).await.unwrap();
 
-            assert!(text.contains(cached_response.sub().unwrap()));
+            assert!(text.contains(&cached_response.username.unwrap()));
         }
     }
 }

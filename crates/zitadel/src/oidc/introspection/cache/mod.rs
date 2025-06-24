@@ -9,7 +9,7 @@ use std::ops::Deref;
 
 pub mod in_memory;
 
-type Response = super::ZitadelIntrospectionResponse;
+type Response = crate::oidc::introspection::claims::ZitadelClaims;
 
 /// Implementation of an introspection cache.
 /// Enables caching the introspection results done by

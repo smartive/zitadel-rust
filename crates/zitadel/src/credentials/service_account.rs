@@ -3,7 +3,7 @@ use jsonwebtoken::{encode, Algorithm, EncodingKey, Header};
 use openidconnect::{
     core::{CoreProviderMetadata, CoreTokenType},
     http::HeaderMap,
-    EmptyExtraTokenFields, IssuerUrl, OAuth2TokenResponse, StandardTokenResponse,
+    EmptyExtraTokenFields, HttpClientError, IssuerUrl, OAuth2TokenResponse, StandardTokenResponse,
 };
 use reqwest::{
     header::{ACCEPT, CONTENT_TYPE},
@@ -70,7 +70,7 @@ custom_error! {
         Json{source: serde_json::Error} = "could not parse json: {source}",
         Key{source: jsonwebtoken::errors::Error} = "could not parse RSA key: {source}",
         AudienceUrl{source: openidconnect::url::ParseError} = "audience url could not be parsed: {source}",
-        DiscoveryError{source: Box<dyn std::error::Error>} = "could not discover OIDC document: {source}",
+        DiscoveryError{source: openidconnect::DiscoveryError<HttpClientError<openidconnect::reqwest::Error>>} = "could not discover OIDC document: {source}",
         TokenEndpointMissing = "OIDC document does not contain token endpoint",
         HttpError{source: openidconnect::reqwest::Error} = "http error: {source}",
         UrlEncodeError = "could not encode url params for token request",
@@ -241,7 +241,7 @@ impl ServiceAccount {
         let metadata = CoreProviderMetadata::discover_async(issuer, &async_http_client)
             .await
             .map_err(|e| ServiceAccountError::DiscoveryError {
-                source: Box::new(e),
+                source: e,
             })?;
 
         let jwt = self.create_signed_jwt(audience)?;

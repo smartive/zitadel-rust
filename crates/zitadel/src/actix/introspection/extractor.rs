@@ -4,11 +4,9 @@ use actix_web::dev::Payload;
 use actix_web::error::{ErrorInternalServerError, ErrorUnauthorized};
 use actix_web::{Error, FromRequest, HttpRequest};
 use custom_error::custom_error;
-use openidconnect::TokenIntrospectionResponse;
-use std::collections::HashMap;
 
 use crate::actix::introspection::config::IntrospectionConfig;
-use crate::oidc::introspection::{introspect, IntrospectionError, ZitadelIntrospectionResponse};
+use crate::oidc::introspection::{claims::ZitadelClaims, introspect, IntrospectionError};
 
 custom_error! {
     /// Error type for extractor related errors.
@@ -22,43 +20,31 @@ custom_error! {
         NoUserId = "introspection result contained no user id",
 }
 
-/// Struct for the handler function that requires an authenticated user.
-/// Contains various information about the given token. The fields are optional
-/// since a machine user does not have a profile or (varying by scope) not all
-/// fields are returned from the introspection endpoint.
-#[derive(Debug)]
-pub struct IntrospectedUser {
-    /// UserID of the introspected user (OIDC Field "sub").
-    pub user_id: String,
-    pub username: Option<String>,
-    pub name: Option<String>,
-    pub given_name: Option<String>,
-    pub family_name: Option<String>,
-    pub preferred_username: Option<String>,
-    pub email: Option<String>,
-    pub email_verified: Option<bool>,
-    pub locale: Option<String>,
-    pub project_roles: Option<HashMap<String, HashMap<String, String>>>,
-    pub metadata: Option<HashMap<String, String>>,
-}
-
-impl From<ZitadelIntrospectionResponse> for IntrospectedUser {
-    fn from(response: ZitadelIntrospectionResponse) -> Self {
-        Self {
-            user_id: response.sub().unwrap().to_string(),
-            username: response.username().map(|s| s.to_string()),
-            name: response.extra_fields().name.clone(),
-            given_name: response.extra_fields().given_name.clone(),
-            family_name: response.extra_fields().family_name.clone(),
-            preferred_username: response.extra_fields().preferred_username.clone(),
-            email: response.extra_fields().email.clone(),
-            email_verified: response.extra_fields().email_verified,
-            locale: response.extra_fields().locale.clone(),
-            project_roles: response.extra_fields().project_roles.clone(),
-            metadata: response.extra_fields().metadata.clone(),
-        }
-    }
-}
+/// Type alias for the extracted user.
+/// 
+/// The extracted user will always be valid when fetched in request function arguments.
+/// If not, the API will return with an appropriate error.
+///
+/// # Example
+///
+/// ```
+/// use actix_web::{get, HttpResponse, Responder};
+/// use zitadel::actix::introspection::IntrospectedUser;
+///
+/// #[get("/protected")]
+/// async fn protected_route(user: IntrospectedUser) -> impl Responder {
+///     if !user.has_role("admin") {
+///        return HttpResponse::Forbidden().body("Admin access required");
+///     }
+///     
+///     if user.has_role_in_project("project123", "editor") {
+///         return HttpResponse::Ok().body("Hello Editor");
+///     }
+///     
+///     HttpResponse::Ok().body("Hello Admin")
+/// }
+/// ```
+pub type IntrospectedUser = ZitadelClaims;
 
 impl FromRequest for IntrospectedUser {
     type Error = Error;
@@ -115,12 +101,17 @@ impl FromRequest for IntrospectedUser {
                 ));
             }
 
-            let result = result.unwrap();
-            match result.active() {
-                true if result.sub().is_some() => Ok(result.into()),
-                false => Err(ErrorUnauthorized(IntrospectionExtractorError::Inactive)),
-                _ => Err(ErrorUnauthorized(IntrospectionExtractorError::NoUserId)),
+            let claims = result.unwrap();
+            
+            if !claims.active {
+                return Err(ErrorUnauthorized(IntrospectionExtractorError::Inactive));
             }
+            
+            if claims.sub.is_empty() {
+                return Err(ErrorUnauthorized(IntrospectionExtractorError::NoUserId));
+            }
+            
+            Ok(claims)
         })
     }
 }

@@ -176,3 +176,4 @@ path = "examples/rocket_webapi_oauth_interception_jwtprofile.rs"
 name = "service_account_authentication"
 required-features = ["credentials"]
 path = "examples/service_account_authentication.rs"
+
