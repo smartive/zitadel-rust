@@ -237,12 +237,12 @@ impl ServiceAccount {
     ) -> Result<String, ServiceAccountError> {
         let issuer = IssuerUrl::new(audience.to_string())
             .map_err(|e| ServiceAccountError::AudienceUrl { source: e })?;
-        let async_http_client = reqwest::ClientBuilder::new().redirect(reqwest::redirect::Policy::none()).build()?;
+        let async_http_client = reqwest::ClientBuilder::new()
+            .redirect(reqwest::redirect::Policy::none())
+            .build()?;
         let metadata = CoreProviderMetadata::discover_async(issuer, &async_http_client)
             .await
-            .map_err(|e| ServiceAccountError::DiscoveryError {
-                source: e,
-            })?;
+            .map_err(|e| ServiceAccountError::DiscoveryError { source: e })?;
 
         let jwt = self.create_signed_jwt(audience)?;
         let url = metadata
@@ -271,7 +271,12 @@ impl ServiceAccount {
         // })
         // .await
         // .map_err(|e| ServiceAccountError::HttpError { source: e })?;
-        let response = async_http_client.post(url).headers(headers).body(body).send().await?;
+        let response = async_http_client
+            .post(url)
+            .headers(headers)
+            .body(body)
+            .send()
+            .await?;
 
         serde_json::from_slice(response.bytes().await?.to_vec().as_slice())
             .map_err(|e| ServiceAccountError::Json { source: e })
@@ -288,6 +293,60 @@ impl ServiceAccount {
         let mut header = Header::new(Algorithm::RS256);
         header.kid = Some(self.key_id.to_string());
         let claims = JwtClaims::new(&self.user_id, audience);
+        let jwt = encode(&header, &claims, &key)?;
+
+        Ok(jwt)
+    }
+
+    /// Create a (RSA) signed JWT token with a custom expiry date that can be used
+    /// for offline validation or other authentication purposes.
+    ///
+    /// The function returns a signed JWT token with the specified expiry date.
+    /// This is useful for creating long-lived tokens for offline validation scenarios
+    /// or short-lived tokens for enhanced security.
+    ///
+    /// ### Errors
+    ///
+    /// This method may fail when:
+    /// - The key in the service account is not a valid PEM encoded RSA private key.
+    /// - The JWT encoding fails.
+    ///
+    /// ### Example
+    ///
+    /// ```
+    /// # #[tokio::main]
+    /// # async fn main() -> Result<(), Box<dyn std::error::Error>>{
+    /// # const SERVICE_ACCOUNT: &str = r#"
+    /// # {
+    /// #     "type": "serviceaccount",
+    /// #     "keyId": "181828078849229057",
+    /// #     "key": "-----BEGIN RSA PRIVATE KEY-----\nMIIEpQIBAAKCAQEA9VIWALQqzx1ypi42t7MG4KSOMldD10brsEUjTcjqxhl6TJrP\nsjaNKWArnV/XH+6ZKRd55mUEFFx9VflqdwQtMVPjZKXpV4cFDiPwf1Z1h1DS6im4\nSo7eKR7OGb7TLBhwt7i2UPF4WnxBhTp/M6pG5kCJ1t8glIo5yRbrILXObRmvNWMz\nVIFAyw68NDZGYNhnR8AT43zjeJTFXG/suuEoXO/mMmMjsYY8kS0BbiQeq5t5hIrr\na/odswkDPn5Zd4P91iJHDnYlgfJuo3oRmgpOj/dDsl+vTol+vveeMO4TXPwZcl36\ngUNPok7nd6BA3gqmOS+fMImzmZB42trghARXXwIDAQABAoIBAQCbMOGQcml+ep+T\ntzqQPWYFaLQ37nKRVmE1Mpeh1o+G4Ik4utrXX6EvYpJUzVN29ObZUuufr5nEE7qK\nT+1k+zRntyzr9/VElLrC9kNnGtfg0WWMEvZt3DF4i+9P5CMNCy0LXIOhcxBzFZYR\nZS8hDQArGvrX/nFK5qKlrqTyHXFIHDFa6z59ErhXEnsTgRvx/Mo+6UkdBkHsKnlJ\nAbXqXFbfz6nDsF1DgRra5ODn1k8nZqnC/YcssE7/dlbuByz10ECkOSzqYcfufnsb\n9N1Ld4Xlj3yzsqPFzEJyHHm9eEHQXsPavaXiM64/+zpsksLscEIE/0KtIy5tngpZ\nSCqZAcj5AoGBAPb1bQFWUBmmUuSTtSymsxgXghJiJ3r+jJgdGbkv2IsRTs4En5Sz\n0SbPE1YWmMDDgTacJlB4/XiaojQ/j1EEY17inxYomE72UL6/ET7ycsEw3e9ALuD5\np0y2Sdzes2biH30bw5jD8kJ+hV18T745KtzrwSH4I0lAjnkmiH+0S67VAoGBAP5N\nTtAp/Qdxh9GjNSw1J7KRLtJrrr0pPrJ9av4GoFoWlz+Qw2X3dl8rjG3Bqz9LPV7A\ngiHMel8WTmdIM/S3F4Q3ufEfE+VzG+gncWd9SJfX5/LVhatPzTGLNsY7AYGEpSwT\n5/0anS1mHrLwsVcPrZnigekr5A5mfZl6nxtOnE9jAoGBALACqacbUkmFrmy1DZp+\nUQSptI3PoR3bEG9VxkCjZi1vr3/L8cS1CCslyT1BK6uva4d1cSVHpjfv1g1xA38V\nppE46XOMiUk16sSYPv1jJQCmCHd9givcIy3cefZOTwTTwueTAyv888wKipjfgaIs\n8my0JllEljmeJi0Ylo6V/J7lAoGBAIFqRlmZhLNtC3mcXUsKIhG14OYk9uA9RTMA\nsJpmNOSj6oTm3wndTdhRCT4x+TxUxf6aaZ9ZuEz7xRq6m/ZF1ynqUi5ramyyj9kt\neYD5OSBNODVUhJoSGpLEDjQDg1iucIBmAQHFsYeRGL5nz1hHGkneA87uDzlk3zZk\nOORktReRAoGAGUfU2UfaniAlqrZsSma3ZTlvJWs1x8cbVDyKTYMX5ShHhp+cA86H\nYjSSol6GI2wQPP+qIvZ1E8XyzD2miMJabl92/WY0tHejNNBEHwD8uBZKrtMoFWM7\nWJNl+Xneu/sT8s4pP2ng6QE7jpHXi2TUNmSlgQry9JN2AmA9TuSTW2Y=\n-----END RSA PRIVATE KEY-----\n",
+    /// #     "userId": "181828061098934529"
+    /// # }"#;
+    /// # const ZITADEL_URL: &str = "https://zitadel-libraries-l8boqa.zitadel.cloud";
+    /// use zitadel::credentials::ServiceAccount;
+    /// use time::{OffsetDateTime, Duration};
+    ///
+    /// let service_account = ServiceAccount::load_from_json(SERVICE_ACCOUNT)?;
+    ///
+    /// // Create a JWT that expires in 24 hours
+    /// let expiry = OffsetDateTime::now_utc() + Duration::hours(24);
+    /// let jwt = service_account.create_signed_jwt_with_expiry(ZITADEL_URL, expiry)?;
+    ///
+    /// println!("JWT: {}", jwt);
+    /// # Ok(())
+    /// # }
+    /// ```
+    pub fn create_signed_jwt_with_expiry(
+        &self,
+        audience: &str,
+        expiry: time::OffsetDateTime,
+    ) -> Result<String, ServiceAccountError> {
+        let key = EncodingKey::from_rsa_pem(self.key.as_bytes())
+            .map_err(|e| ServiceAccountError::Key { source: e })?;
+        let mut header = Header::new(Algorithm::RS256);
+        header.kid = Some(self.key_id.to_string());
+        let claims = JwtClaims::new_with_expiry(&self.user_id, audience, expiry);
         let jwt = encode(&header, &claims, &key)?;
 
         Ok(jwt)
@@ -335,6 +394,8 @@ mod tests {
     use std::io::Write;
 
     use super::*;
+    use crate::credentials::jwt::JwtClaims;
+    use jsonwebtoken::{decode, DecodingKey, Validation};
 
     const ZITADEL_URL: &str = "https://zitadel-libraries-l8boqa.zitadel.cloud";
     const SERVICE_ACCOUNT: &str = r#"
@@ -393,5 +454,78 @@ mod tests {
         let claims = sa.create_signed_jwt(ZITADEL_URL).unwrap();
 
         assert_eq!(&claims[0..5], "eyJ0e");
+    }
+
+    #[test]
+    fn creates_a_signed_jwt_with_custom_expiry() {
+        let sa = ServiceAccount::load_from_json(SERVICE_ACCOUNT).unwrap();
+        let future_time = time::OffsetDateTime::now_utc() + time::Duration::days(7);
+        let jwt = sa
+            .create_signed_jwt_with_expiry(ZITADEL_URL, future_time)
+            .unwrap();
+
+        assert_eq!(&jwt[0..5], "eyJ0e");
+
+        // Verify it's a valid JWT format
+        let parts: Vec<&str> = jwt.split('.').collect();
+        assert_eq!(parts.len(), 3);
+
+        // For testing, we'll decode without verification first to check the claims
+        // In production, you would use the public key from JWKS endpoint
+        let mut validation = Validation::new(Algorithm::RS256);
+        validation.insecure_disable_signature_validation();
+        validation.set_audience(&[ZITADEL_URL]);
+
+        let token_data =
+            decode::<JwtClaims>(&jwt, &DecodingKey::from_secret(&[]), &validation).unwrap();
+
+        // Verify the expiry time matches what we set
+        assert_eq!(token_data.claims.exp, future_time.unix_timestamp());
+
+        // Verify the token is not expired (should be valid for 7 days)
+        assert!(token_data.claims.exp > time::OffsetDateTime::now_utc().unix_timestamp());
+    }
+
+    #[test]
+    fn verifies_expired_jwt() {
+        let sa = ServiceAccount::load_from_json(SERVICE_ACCOUNT).unwrap();
+
+        // Create a JWT that expired 1 hour ago
+        let past_time = time::OffsetDateTime::now_utc() - time::Duration::hours(1);
+        let jwt = sa
+            .create_signed_jwt_with_expiry(ZITADEL_URL, past_time)
+            .unwrap();
+
+        // Decode without signature validation and without expiry check to inspect claims
+        let mut validation = Validation::new(Algorithm::RS256);
+        validation.insecure_disable_signature_validation();
+        validation.set_audience(&[ZITADEL_URL]);
+        validation.validate_exp = false; // Disable expiry validation to inspect the token
+
+        let token_data =
+            decode::<JwtClaims>(&jwt, &DecodingKey::from_secret(&[]), &validation).unwrap();
+
+        // Verify the token is expired
+        assert!(token_data.claims.exp < time::OffsetDateTime::now_utc().unix_timestamp());
+
+        // Now try with validation enabled (not checking signature, but checking exp)
+        let mut validation_with_exp = Validation::new(Algorithm::RS256);
+        validation_with_exp.insecure_disable_signature_validation();
+        validation_with_exp.set_audience(&[ZITADEL_URL]);
+
+        // This should fail because the token is expired
+        let result =
+            decode::<JwtClaims>(&jwt, &DecodingKey::from_secret(&[]), &validation_with_exp);
+        assert!(result.is_err());
+
+        if let Err(e) = result {
+            match e.kind() {
+                jsonwebtoken::errors::ErrorKind::ExpiredSignature => {
+                    // Expected error
+                    assert!(true);
+                }
+                _ => panic!("Expected ExpiredSignature error, got: {:?}", e),
+            }
+        }
     }
 }
