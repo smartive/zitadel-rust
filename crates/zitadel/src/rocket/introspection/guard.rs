@@ -1,11 +1,9 @@
 use custom_error::custom_error;
-use openidconnect::TokenIntrospectionResponse;
 use rocket::figment::Figment;
 use rocket::http::Status;
 use rocket::request::{FromRequest, Outcome};
 use rocket::{async_trait, Request};
 use std::collections::BTreeSet;
-use std::collections::HashMap;
 
 #[cfg(feature = "rocket_okapi")]
 use rocket_okapi::{
@@ -21,7 +19,7 @@ use rocket_okapi::{
 use schemars::schema::{InstanceType, ObjectValidation, Schema, SchemaObject};
 #[cfg(feature = "rocket_okapi")]
 
-use crate::oidc::introspection::{introspect, IntrospectionError, ZitadelIntrospectionResponse};
+use crate::oidc::introspection::{claims::ZitadelClaims, introspect, IntrospectionError};
 use crate::rocket::introspection::IntrospectionConfig;
 
 use super::config::IntrospectionRocketConfig;
@@ -38,43 +36,31 @@ custom_error! {
         NoUserId = "introspection result contained no user id",
 }
 
-/// Struct for the injected route guard that requires an authenticated user.
-/// Contains various information about the given token. The fields are optional
-/// since a machine user does not have a profile or (varying by scope) not all
-/// fields are returned from the introspection endpoint.
-#[derive(Debug)]
-pub struct IntrospectedUser {
-    /// UserID of the introspected user (OIDC Field "sub").
-    pub user_id: String,
-    pub username: Option<String>,
-    pub name: Option<String>,
-    pub given_name: Option<String>,
-    pub family_name: Option<String>,
-    pub preferred_username: Option<String>,
-    pub email: Option<String>,
-    pub email_verified: Option<bool>,
-    pub locale: Option<String>,
-    pub project_roles: Option<HashMap<String, HashMap<String, String>>>,
-    pub metadata: Option<HashMap<String, String>>,
-}
-
-impl From<ZitadelIntrospectionResponse> for IntrospectedUser {
-    fn from(response: ZitadelIntrospectionResponse) -> Self {
-        Self {
-            user_id: response.sub().unwrap().to_string(),
-            username: response.username().map(|s| s.to_string()),
-            name: response.extra_fields().name.clone(),
-            given_name: response.extra_fields().given_name.clone(),
-            family_name: response.extra_fields().family_name.clone(),
-            preferred_username: response.extra_fields().preferred_username.clone(),
-            email: response.extra_fields().email.clone(),
-            email_verified: response.extra_fields().email_verified,
-            locale: response.extra_fields().locale.clone(),
-            project_roles: response.extra_fields().project_roles.clone(),
-            metadata: response.extra_fields().metadata.clone(),
-        }
-    }
-}
+/// Type alias for the extracted user.
+/// 
+/// The extracted user will always be valid when fetched in request function arguments.
+/// If not, the API will return with an appropriate error.
+///
+/// # Example
+///
+/// ```
+/// use rocket::{get, State};
+/// use zitadel::rocket::introspection::IntrospectedUser;
+///
+/// #[get("/protected")]
+/// async fn protected_route(user: &IntrospectedUser) -> &'static str {
+///     if !user.has_role("admin") {
+///        return "Admin access required";
+///     }
+///     
+///     if user.has_role_in_project("project123", "editor") {
+///         return "Hello Editor";
+///     }
+///     
+///     "Hello Admin"
+/// }
+/// ```
+pub type IntrospectedUser = ZitadelClaims;
 
 #[async_trait]
 impl<'request> FromRequest<'request> for &'request IntrospectedUser {
@@ -149,12 +135,17 @@ impl<'request> FromRequest<'request> for &'request IntrospectedUser {
                     ));
                 }
 
-                let result = result.unwrap();
-                match result.active() {
-                    true if result.sub().is_some() => Ok(result.into()),
-                    false => Err((Status::Unauthorized, IntrospectionGuardError::Inactive)),
-                    _ => Err((Status::Unauthorized, IntrospectionGuardError::NoUserId)),
+                let claims = result.unwrap();
+                
+                if !claims.active {
+                    return Err((Status::Unauthorized, IntrospectionGuardError::Inactive));
                 }
+                
+                if claims.sub.is_empty() {
+                    return Err((Status::Unauthorized, IntrospectionGuardError::NoUserId));
+                }
+                
+                Ok(claims)
             })
             .await;
 

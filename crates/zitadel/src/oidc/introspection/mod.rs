@@ -2,6 +2,7 @@ use custom_error::custom_error;
 use openidconnect::url::{ParseError, Url};
 use openidconnect::{
     core::CoreTokenType, ExtraTokenFields, StandardTokenIntrospectionResponse,
+    TokenIntrospectionResponse,
 };
 use reqwest::header::{HeaderMap, ACCEPT, AUTHORIZATION, CONTENT_TYPE};
 use serde::{Deserialize, Serialize};
@@ -19,6 +20,9 @@ use crate::oidc::discovery::{discover, DiscoveryError};
 
 #[cfg(feature = "introspection_cache")]
 pub mod cache;
+pub mod claims;
+
+use self::claims::ZitadelClaims;
 
 custom_error! {
     /// Error type for introspection related errors.
@@ -39,7 +43,7 @@ custom_error! {
             jsonwebtoken::errors::ErrorKind::InvalidAlgorithmName => "Invalid Algorithm in JWKS",
             _ => "Other JWT error"
         }},
-
+        TokenNotActive = "token is not active",
 }
 
 /// Introspection response information that is returned by the ZITADEL
@@ -226,14 +230,14 @@ fn payload(
 }
 
 /// Perform an [OAuth 2.0 Token Introspection](https://www.rfc-editor.org/rfc/rfc7662)
-/// against a given ZITADEL authority (instance). The function does not interpret the result
-/// of the call but only returns the introspection result.
+/// against a given ZITADEL authority (instance) and return simplified token claims.
 ///
 /// ### Errors
 ///
 /// The introspection may fail if:
 /// - The introspection call fails (bad request, unauthorized, other http errors)
 /// - The response of the introspection could not be parsed
+/// - The token is not active
 ///
 /// ### Example
 ///
@@ -252,18 +256,43 @@ fn payload(
 /// let token = "dEnGhIFs3VnqcQU5D2zRSeiarB1nwH6goIKY0J8MWZbsnWcTuu1C59lW9DgCq1y096GYdXA";
 /// let metadata = discover(authority).await?;
 ///
-/// let result = introspect(
+/// let claims = introspect(
 ///     metadata.additional_metadata().introspection_endpoint.as_ref().unwrap(),
 ///     authority,
 ///     &auth,
 ///     token,
 /// ).await?;
 ///
-/// println!("{:?}", result);
+/// println!("User ID: {}", claims.sub);
+/// if claims.has_role("admin") {
+///     println!("User is an admin");
+/// }
 /// # Ok(())
 /// # }
 /// ```
+#[cfg(feature = "oidc")]
 pub async fn introspect(
+    introspection_uri: &str,
+    authority: &str,
+    authentication: &AuthorityAuthentication,
+    token: &str,
+) -> Result<ZitadelClaims, IntrospectionError> {
+    let response = introspect_raw(introspection_uri, authority, authentication, token).await?;
+    
+    // Check if token is active
+    if !response.active() {
+        return Err(IntrospectionError::TokenNotActive);
+    }
+    
+    Ok(response.into())
+}
+
+/// Perform an [OAuth 2.0 Token Introspection](https://www.rfc-editor.org/rfc/rfc7662)
+/// and return the raw introspection response.
+/// 
+/// This function is for advanced use cases where you need access to the full response.
+/// For most use cases, use [`introspect`] which returns simplified token claims.
+pub async fn introspect_raw(
     introspection_uri: &str,
     authority: &str,
     authentication: &AuthorityAuthentication,
@@ -336,6 +365,30 @@ fn decode_metadata(response: &mut ZitadelIntrospectionResponse) -> Result<(), In
 }
 
 
+/// Fetch the JSON Web Key Set (JWKS) from a ZITADEL instance.
+/// 
+/// This function retrieves the public keys used by ZITADEL to sign JWT tokens.
+/// These keys can be used for local validation of tokens without making introspection calls.
+/// 
+/// # Arguments
+/// 
+/// * `idm_url` - The base URL of the ZITADEL instance (e.g., "https://my-instance.zitadel.cloud")
+/// 
+/// # Returns
+/// 
+/// Returns a `JwkSet` containing the public keys.
+/// 
+/// # Example
+/// 
+/// ```no_run
+/// # use zitadel::oidc::introspection::fetch_jwks;
+/// # #[tokio::main]
+/// # async fn main() -> Result<(), Box<dyn std::error::Error>> {
+/// let jwks = fetch_jwks("https://my-instance.zitadel.cloud").await?;
+/// println!("Fetched {} keys", jwks.keys.len());
+/// # Ok(())
+/// # }
+/// ```
 pub async fn fetch_jwks(idm_url: &str) -> Result<JwkSet, IntrospectionError> {
     let client: Client = Client::new();
     let openid_config = discover(idm_url).await.map_err(|err| {
@@ -351,6 +404,40 @@ pub async fn fetch_jwks(idm_url: &str) -> Result<JwkSet, IntrospectionError> {
 }
 
 
+/// Validate a JWT token locally using JWKS keys.
+/// 
+/// This function validates a JWT token without making a network call to the introspection endpoint.
+/// It uses the provided JWKS keys to verify the token signature and validates the token claims.
+/// 
+/// # Arguments
+/// 
+/// * `issuers` - List of valid issuers to check against the token's "iss" claim
+/// * `audiences` - List of valid audiences to check against the token's "aud" claim
+/// * `jwks_keys` - The JWKS keys to use for signature validation
+/// * `token` - The JWT token to validate
+/// 
+/// # Returns
+/// 
+/// Returns the deserialized token claims if validation succeeds.
+/// 
+/// # Example
+/// 
+/// ```no_run
+/// # use zitadel::oidc::introspection::{fetch_jwks, local_jwt_validation};
+/// # use zitadel::oidc::introspection::claims::ZitadelClaims;
+/// # #[tokio::main]
+/// # async fn main() -> Result<(), Box<dyn std::error::Error>> {
+/// let jwks = fetch_jwks("https://my-instance.zitadel.cloud").await?;
+/// let claims: ZitadelClaims = local_jwt_validation(
+///     &["https://my-instance.zitadel.cloud"],
+///     &["my-client-id"],
+///     jwks,
+///     "eyJ..."
+/// ).await?;
+/// println!("User ID: {}", claims.sub);
+/// # Ok(())
+/// # }
+/// ```
 pub async fn local_jwt_validation<U>(issuers: &[&str],
                                   audiences: &[&str],
                                   jwks_keys: JwkSet,

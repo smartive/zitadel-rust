@@ -1,9 +1,7 @@
 pub use moka::future::{Cache, CacheBuilder};
 use std::time::Duration;
 
-use openidconnect::TokenIntrospectionResponse;
-
-type Response = super::super::ZitadelIntrospectionResponse;
+type Response = crate::oidc::introspection::claims::ZitadelClaims;
 
 #[derive(Debug)]
 pub struct InMemoryIntrospectionCache {
@@ -66,10 +64,10 @@ impl super::IntrospectionCache for InMemoryIntrospectionCache {
     }
 
     async fn set(&self, token: &str, response: Response) {
-        if !response.active() || response.exp().is_none() {
+        if !response.active || response.exp == 0 {
             return;
         }
-        let expires_at = response.exp().unwrap().timestamp();
+        let expires_at = response.exp;
         self.cache
             .insert(token.to_string(), (response, expires_at))
             .await;
@@ -86,16 +84,34 @@ mod tests {
 
     use crate::oidc::introspection::cache::IntrospectionCache;
     use chrono::{TimeDelta, Utc};
+    use std::collections::HashMap;
 
     use super::*;
+
+    fn create_test_claims() -> Response {
+        use crate::oidc::introspection::claims::ZitadelClaims;
+        ZitadelClaims {
+            sub: "test".to_string(),
+            iss: "https://test.zitadel.cloud".to_string(),
+            active: false,
+            ..Default::default()
+        }
+    }
 
     #[tokio::test]
     async fn test_get_set() {
         let c = InMemoryIntrospectionCache::new();
         let t = &c as &dyn IntrospectionCache;
 
-        let mut response = Response::new(true, Default::default());
-        response.set_exp(Some(Utc::now()));
+        let response = Response {
+            sub: "test".to_string(),
+            iss: "https://test.zitadel.cloud".to_string(),
+            aud: vec![],
+            exp: Utc::now().timestamp() + 3600,
+            iat: Utc::now().timestamp(),
+            active: true,
+            ..create_test_claims()
+        };
 
         t.set("token1", response.clone()).await;
         t.set("token2", response.clone()).await;
@@ -110,7 +126,11 @@ mod tests {
         let c = InMemoryIntrospectionCache::new();
         let t = &c as &dyn IntrospectionCache;
 
-        let response = Response::new(true, Default::default());
+        let response = Response {
+            exp: 0, // No expiration
+            active: true,
+            ..create_test_claims()
+        };
 
         t.set("token1", response.clone()).await;
         t.set("token2", response.clone()).await;
@@ -124,8 +144,11 @@ mod tests {
         let c = InMemoryIntrospectionCache::new();
         let t = &c as &dyn IntrospectionCache;
 
-        let mut response = Response::new(true, Default::default());
-        response.set_exp(Some(Utc::now()));
+        let response = Response {
+            exp: Utc::now().timestamp() + 3600,
+            active: true,
+            ..create_test_claims()
+        };
 
         t.set("token1", response.clone()).await;
         t.set("token2", response.clone()).await;
@@ -141,8 +164,11 @@ mod tests {
         let c = InMemoryIntrospectionCache::new();
         let t = &c as &dyn IntrospectionCache;
 
-        let mut response = Response::new(true, Default::default());
-        response.set_exp(Some(Utc::now() - TimeDelta::try_seconds(10).unwrap()));
+        let response = Response {
+            exp: (Utc::now() - TimeDelta::try_seconds(10).unwrap()).timestamp(),
+            active: true,
+            ..create_test_claims()
+        };
 
         t.set("token1", response.clone()).await;
         t.set("token2", response.clone()).await;
