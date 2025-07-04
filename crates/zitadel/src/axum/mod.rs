@@ -5,4 +5,8 @@
 //! Refer to the specific authentication method to see further documentation and examples:
 //!
 //! - To use OAuth 2.0 Token Introspection, head over to the [introspection] module.
+//! - To handle ZITADEL Actions v3 webhooks, see the [actions] module.
 pub mod introspection;
+
+#[cfg(feature = "actions-v3")]
+pub mod actions;
