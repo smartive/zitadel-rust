@@ -237,7 +237,9 @@ impl ServiceAccount {
     ) -> Result<String, ServiceAccountError> {
         let issuer = IssuerUrl::new(audience.to_string())
             .map_err(|e| ServiceAccountError::AudienceUrl { source: e })?;
-        let async_http_client = reqwest::ClientBuilder::new().redirect(reqwest::redirect::Policy::none()).build()?;
+        let async_http_client = reqwest::ClientBuilder::new()
+            .redirect(reqwest::redirect::Policy::none())
+            .build()?;
         let metadata = CoreProviderMetadata::discover_async(issuer, &async_http_client)
             .await
             .map_err(|e| ServiceAccountError::DiscoveryError {
@@ -271,7 +273,12 @@ impl ServiceAccount {
         // })
         // .await
         // .map_err(|e| ServiceAccountError::HttpError { source: e })?;
-        let response = async_http_client.post(url).headers(headers).body(body).send().await?;
+        let response = async_http_client
+            .post(url)
+            .headers(headers)
+            .body(body)
+            .send()
+            .await?;
 
         serde_json::from_slice(response.bytes().await?.to_vec().as_slice())
             .map_err(|e| ServiceAccountError::Json { source: e })
@@ -299,14 +306,14 @@ impl AuthenticationOptions {
         let mut result = vec!["openid".to_string()];
 
         for role in &self.roles {
-            let scope = format!("urn:zitadel:iam:org:project:role:{}", role);
+            let scope = format!("urn:zitadel:iam:org:project:role:{role}");
             if !result.contains(&scope) {
                 result.push(scope);
             }
         }
 
         for p_id in &self.project_audiences {
-            let scope = format!("urn:zitadel:iam:org:project:id:{}:aud", p_id);
+            let scope = format!("urn:zitadel:iam:org:project:id:{p_id}:aud");
             if !result.contains(&scope) {
                 result.push(scope);
             }

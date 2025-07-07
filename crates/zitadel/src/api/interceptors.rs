@@ -180,10 +180,7 @@ impl Interceptor for ServiceAccountInterceptor {
             }) = state_read_guard.deref()
             {
                 if token_expiry > &time::OffsetDateTime::now_utc() {
-                    meta.insert(
-                        "authorization",
-                        format!("Bearer {}", token).parse().unwrap(),
-                    );
+                    meta.insert("authorization", format!("Bearer {token}").parse().unwrap());
 
                     return Ok(request);
                 }
@@ -216,10 +213,7 @@ impl Interceptor for ServiceAccountInterceptor {
                 token_expiry: time::OffsetDateTime::now_utc() + time::Duration::minutes(59),
             });
 
-            meta.insert(
-                "authorization",
-                format!("Bearer {}", token).parse().unwrap(),
-            );
+            meta.insert("authorization", format!("Bearer {token}").parse().unwrap());
         }
 
         Ok(request)

@@ -55,7 +55,7 @@ api-settings-v2 = ["api-common", "zitadel-gen/zitadel-settings-v2" ]
 api-user-v2 = ["api-common", "zitadel-gen/zitadel-user-v2" ]
 
 
-tls-roots = ["tonic/tls-roots"]
+tls-roots = ["tonic/tls-roots", "reqwest/rustls-tls-native-roots"]
 tls-webpki-roots = ["tonic/tls-webpki-roots"]
 
 
