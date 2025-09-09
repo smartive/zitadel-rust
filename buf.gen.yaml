@@ -8,6 +8,10 @@ plugins:
     opt:
       - compile_well_known_types
       - extern_path=.google.protobuf=::pbjson_types
+      - message_attribute=.=#[serde(rename_all = "camelCase")]
+      - type_attribute=.=#[::pyo3::pyclass]
+  - plugin: prost-serde
+    out: crates/zitadel-gen/src/api/
   - plugin: tonic
     out: crates/zitadel-gen/src/api/
     opt:

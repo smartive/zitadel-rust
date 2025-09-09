@@ -8,12 +8,7 @@ authors = ["Christoph Bühler <christoph@smartive.ch>"]
 repository = "https://github.com/buehler/zitadel-rust"
 keywords = ["ZITADEL", "gRPC", "clients", "authentication", "oidc"]
 categories = ["authentication", "api-bindings"]
-include = [
-  "src/**/*.rs",
-  "Cargo.toml",
-  "LICENSE*",
-  "README.md",
-]
+include = ["src/**/*.rs", "Cargo.toml", "LICENSE*", "README.md"]
 
 [features]
 default = ["tls-roots"]
@@ -21,7 +16,13 @@ default = ["tls-roots"]
 ## Feature that enables support for the [actix framework](https://actix.rs/).
 actix = ["credentials", "oidc", "dep:actix-web"]
 
-api-common = ["dep:prost", "dep:prost-types", "dep:tonic", "dep:tonic-types", "dep:pbjson-types", "dep:zitadel-gen" ]
+api-common = [
+  "dep:prost",
+  "dep:prost-types",
+  "dep:tonic",
+  "dep:tonic-types",
+  "dep:pbjson-types",
+]
 
 ## The API feature enables all gRPC service clients to access the ZITADEL API.
 api = [
@@ -33,26 +34,26 @@ api = [
   "api-org-v2",
   "api-session-v2",
   "api-settings-v2",
-  "api-user-v2"
+  "api-user-v2",
 ]
 ## The API feature enables all gRPC service clients to access the respective ZITADEL API.
-api-admin-v1 = ["api-common", "zitadel-gen/zitadel-admin-v1" ]
+api-admin-v1 = ["api-common"]
 ## The API feature enables all gRPC service clients to access the respective ZITADEL API.
-api-auth-v1 = ["api-common", "zitadel-gen/zitadel-auth-v1" ]
+api-auth-v1 = ["api-common"]
 ## The API feature enables all gRPC service clients to access the respective ZITADEL API.
-api-management-v1 = ["api-common", "zitadel-gen/zitadel-v1-v1" ]
+api-management-v1 = ["api-common"]
 ## The API feature enables all gRPC service clients to access the respective ZITADEL API.
-api-system-v1 = ["api-common", "zitadel-gen/zitadel-system-v1", "zitadel-gen/zitadel-authn-v1" ]
+api-system-v1 = ["api-common"]
 ## The API feature enables all gRPC service clients to access the respective ZITADEL API.
-api-oidc-v2 = ["api-common", "zitadel-gen/zitadel-oidc-v2" ]
+api-oidc-v2 = ["api-common"]
 ## The API feature enables all gRPC service clients to access the respective ZITADEL API.
-api-org-v2 = ["api-common", "zitadel-gen/zitadel-org-v2", "zitadel-gen/zitadel-user-v2" ]
+api-org-v2 = ["api-common"]
 ## The API feature enables all gRPC service clients to access the respective ZITADEL API.
-api-session-v2 = ["api-common", "zitadel-gen/zitadel-session-v2" ]
+api-session-v2 = ["api-common"]
 ## The API feature enables all gRPC service clients to access the respective ZITADEL API.
-api-settings-v2 = ["api-common", "zitadel-gen/zitadel-settings-v2" ]
+api-settings-v2 = ["api-common"]
 ## The API feature enables all gRPC service clients to access the respective ZITADEL API.
-api-user-v2 = ["api-common", "zitadel-gen/zitadel-user-v2" ]
+api-user-v2 = ["api-common"]
 
 
 tls-roots = ["tonic/tls-roots"]
@@ -65,7 +66,15 @@ axum = ["credentials", "oidc", "dep:axum", "dep:axum-extra"]
 ## The credentials feature enables special credentials helpers for ZITADEL.
 ## For example, it allows the user to create a ZITADEL service account and
 ## authenticate against ZITADEL.
-credentials = ["dep:jsonwebtoken", "dep:openidconnect", "dep:reqwest", "dep:serde", "dep:serde_json", "dep:serde_urlencoded", "dep:time"]
+credentials = [
+  "dep:jsonwebtoken",
+  "dep:openidconnect",
+  "dep:reqwest",
+  "dep:serde",
+  "dep:serde_json",
+  "dep:serde_urlencoded",
+  "dep:time",
+]
 
 ## The interceptors feature enables specific gRPC interceptors and
 ## new convenience functions to create a gRPC client with interceptors.
@@ -93,12 +102,13 @@ rocket = ["credentials", "oidc", "dep:rocket"]
 rocket_okapi = ["rocket", "dep:rocket_okapi", "dep:schemars"]
 
 
-
 [dependencies]
 actix-web = { version = "4.5.1", optional = true }
 async-trait = { version = "0.1.80", optional = true }
 axum = { version = "0.8.0", optional = true, features = ["macros"] }
-axum-extra = { version = "0.10.0", optional = true, features = ["typed-header"] } #0.11.0 is yanked
+axum-extra = { version = "0.10.0", optional = true, features = [
+  "typed-header",
+] } #0.11.0 is yanked
 base64-compat = { version = "1", optional = true }
 custom_error = "1.9.2"
 document-features = { version = "0.2.8", optional = true }
@@ -108,7 +118,10 @@ openidconnect = { version = "4.0.0", optional = true }
 pbjson-types = { version = "0.7.0", optional = true }
 prost = { version = "0.13.1", optional = true }
 prost-types = { version = "0.13.1", optional = true }
-reqwest = { version = "0.12.12", features = ["json", "rustls-tls"], default-features = false, optional = true }
+reqwest = { version = "0.12.12", features = [
+  "json",
+  "rustls-tls",
+], default-features = false, optional = true }
 rocket = { version = "0.5.0", optional = true }
 serde = { version = "1.0.200", features = ["derive"], optional = true }
 serde_json = { version = "1.0.116", optional = true }
@@ -118,14 +131,11 @@ tokio = { version = "1.37.0", optional = true, features = [
   "macros",
   "rt-multi-thread",
 ] }
-tonic = { version = "0.12.1", features = [
-  "tls",
-], optional = true }
+tonic = { version = "0.12.1", features = ["tls"], optional = true }
 rocket_okapi = { version = "0.9.0", optional = true, default-features = false }
-schemars = {version = "0.8.21", optional = true}
+schemars = { version = "0.8.21", optional = true }
 tonic-types = { version = "0.12.1", optional = true }
-
-zitadel-gen = { path = "../zitadel-gen", version = "2.69",  optional = true }
+zitadel-gen = { version = "2.69.1", path = "../zitadel-gen" }
 
 [dev-dependencies]
 chrono = "0.4.38"

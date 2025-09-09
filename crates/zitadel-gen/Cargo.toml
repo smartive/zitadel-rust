@@ -62,11 +62,15 @@ proto_full = ["zitadel-action-v1","zitadel-admin-v1","zitadel-app-v1","zitadel-a
 
 [dependencies]
 anyhow = "1.0"
-pbjson-types = { version = "0.7.0"}
+pbjson-types = { version = "0.7.0" }
+pbjson = { version = "0.7.0", features = [] }
 prost = { version = "0.13.1", default-features = false, features = ["std"] }
 prost-types = { version = "0.13.1", default-features = false }
 regex = { version = "1.5.5", default-features = false }
 tonic = "0.12.0"
+serde = { version = "1.0.200", features = ["derive"] }
+serde_json = { version = "1.0.116" }
+serde_urlencoded = { version = "0.7.1" }
 
 [build-dependencies]
 tonic-build = "0.12.0"

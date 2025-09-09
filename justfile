@@ -9,7 +9,7 @@ clean:
     @rm -rf {{proto_dir}}
 
 generate-grpc:
-    buf generate https://github.com/zitadel/zitadel.git#tag={{zitadel_proto_version}} --path ./proto/zitadel
+    buf generate zitadel/proto
 
 build_zitadel-grpc:
     cargo set-version --package zitadel-gen `echo {{zitadel_proto_version}} | sed 's/^v//'`
