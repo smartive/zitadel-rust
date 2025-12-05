@@ -21,7 +21,7 @@ default = ["tls-roots"]
 ## Feature that enables support for the [actix framework](https://actix.rs/).
 actix = ["credentials", "oidc", "dep:actix-web"]
 
-api-common = ["dep:tonic", "dep:zitadel-gen" ]
+api-common = ["dep:tonic", "dep:zitadel-gen"]
 
 ## The API feature enables all gRPC service clients to access the ZITADEL API.
 api = [
@@ -55,7 +55,7 @@ api-settings-v2 = ["api-common", "zitadel-gen/zitadel-settings-v2" ]
 api-user-v2 = ["api-common", "zitadel-gen/zitadel-user-v2" ]
 
 
-tls-roots = ["tonic/tls-roots"]
+tls-roots = ["tonic/tls-native-roots"]
 tls-webpki-roots = ["tonic/tls-webpki-roots"]
 
 
@@ -115,8 +115,8 @@ tokio = { version = "1.37.0", optional = true, features = [
   "macros",
   "rt-multi-thread",
 ] }
-tonic = { version = "0.12.1", features = [
-  "tls",
+tonic = { version = "0.14.2", features = [
+  "tls-ring",
 ], optional = true }
 rocket_okapi = { version = "0.9.0", optional = true, default-features = false }
 schemars = {version = "0.8.21", optional = true}

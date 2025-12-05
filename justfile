@@ -16,7 +16,7 @@ build_zitadel-grpc:
     cargo build --package zitadel-gen --release
 
 install-tools:
-    cargo install protoc-gen-prost protoc-gen-tonic protoc-gen-prost-crate protoc-gen-prost-serde cargo-edit
+    cargo install protoc-gen-prost-crate cargo-edit
 
 all_examples:
     # fetch_profile_with_pat
