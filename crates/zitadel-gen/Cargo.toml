@@ -1,6 +1,6 @@
 [package]
 name = "zitadel-gen"
-version = "2.69.1"
+version = "2.71.19"
 edition = "2021"
 
 
