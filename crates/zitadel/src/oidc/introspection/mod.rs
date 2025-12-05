@@ -1,21 +1,19 @@
+use crate::credentials::{Application, ApplicationError};
+use crate::oidc::discovery::{discover, DiscoveryError};
 use custom_error::custom_error;
+use jsonwebtoken::jwk::{AlgorithmParameters, JwkSet};
+use jsonwebtoken::{decode, decode_header, Algorithm, DecodingKey, Header, TokenData, Validation};
 use openidconnect::url::{ParseError, Url};
-use openidconnect::{
-    core::CoreTokenType, ExtraTokenFields, StandardTokenIntrospectionResponse,
-};
+use openidconnect::{core::CoreTokenType, ExtraTokenFields, StandardTokenIntrospectionResponse};
 use reqwest::header::{HeaderMap, ACCEPT, AUTHORIZATION, CONTENT_TYPE};
+use reqwest::Client;
+use serde::de::DeserializeOwned;
 use serde::{Deserialize, Serialize};
+use serde_json::Value as JsonValue;
 use std::collections::HashMap;
 use std::error::Error;
 use std::fmt::{Debug, Display};
-use jsonwebtoken::{decode, decode_header, Algorithm, DecodingKey, Header, TokenData, Validation};
-use jsonwebtoken::jwk::{AlgorithmParameters, JwkSet};
 use std::str::FromStr;
-use reqwest::{Client};
-use serde::de::DeserializeOwned;
-use serde_json::Value as JsonValue;
-use crate::credentials::{Application, ApplicationError};
-use crate::oidc::discovery::{discover, DiscoveryError};
 
 #[cfg(feature = "introspection_cache")]
 pub mod cache;
@@ -50,11 +48,11 @@ custom_error! {
 /// - When scope contains `urn:zitadel:iam:user:resourceowner`, the fields prefixed with
 ///   `resource_owner_` are set.
 /// - When scope contains `urn:zitadel:iam:user:metadata`, the metadata hashmap will be
-///    filled with the user metadata.
-///  - When scope contains `urn:zitadel:iam:org:projects:roles`, the project_roles hashmap will be
-///    filled with the project roles.
-///  - When using custom claims through Zitadel Actions, the custom_claims hashmap will be filled with
-///    the custom claims. [custom claims](https://zitadel.com/docs/apis/openidoauth/claims#custom-claims)
+///   filled with the user metadata.
+/// - When scope contains `urn:zitadel:iam:org:projects:roles`, the project_roles hashmap will be
+///   filled with the project roles.
+/// - When using custom claims through Zitadel Actions, the custom_claims hashmap will be filled with
+///   the custom claims. [custom claims](https://zitadel.com/docs/apis/openidoauth/claims#custom-claims)
 ///
 /// It can be used as a basis for further customized authorization checks, for example:
 /// ```
@@ -140,7 +138,7 @@ pub struct ZitadelIntrospectionExtraTokenFields {
     #[serde(rename = "urn:zitadel:iam:user:metadata")]
     pub metadata: Option<HashMap<String, String>>,
     #[serde(flatten)]
-    custom_claims: Option<HashMap<String, JsonValue>>
+    custom_claims: Option<HashMap<String, JsonValue>>,
 }
 
 impl ExtraTokenFields for ZitadelIntrospectionExtraTokenFields {}
@@ -269,17 +267,22 @@ pub async fn introspect(
     authentication: &AuthorityAuthentication,
     token: &str,
 ) -> Result<ZitadelIntrospectionResponse, IntrospectionError> {
-    let async_http_client = reqwest::ClientBuilder::new().redirect(reqwest::redirect::Policy::none()).build()?;
+    let async_http_client = reqwest::ClientBuilder::new()
+        .redirect(reqwest::redirect::Policy::none())
+        .build()?;
 
-    let url= Url::parse(introspection_uri)
-            .map_err(|source| IntrospectionError::ParseUrl { source })?;
+    let url =
+        Url::parse(introspection_uri).map_err(|source| IntrospectionError::ParseUrl { source })?;
     let response = async_http_client
         .post(url)
         .headers(headers(authentication))
         .body(payload(authority, authentication, token)?)
         .send()
         .await
-        .map_err(|source| IntrospectionError::RequestFailed {origin: "The introspection".to_string(),  source })?;
+        .map_err(|source| IntrospectionError::RequestFailed {
+            origin: "The introspection".to_string(),
+            source,
+        })?;
 
     if !response.status().is_success() {
         let status = response.status();
@@ -303,12 +306,12 @@ struct ZitadelResponseError {
     body: String,
 }
 impl ZitadelResponseError {
-        fn new(status_code: reqwest::StatusCode, body: &[u8]) -> Self {
-            Self {
-                status_code: status_code.to_string(),
-                body: String::from_utf8_lossy(body).to_string(),
-            }
+    fn new(status_code: reqwest::StatusCode, body: &[u8]) -> Self {
+        Self {
+            status_code: status_code.to_string(),
+            body: String::from_utf8_lossy(body).to_string(),
         }
+    }
 }
 
 impl Display for ZitadelResponseError {
@@ -335,32 +338,35 @@ fn decode_metadata(response: &mut ZitadelIntrospectionResponse) -> Result<(), In
     Ok(())
 }
 
-
 pub async fn fetch_jwks(idm_url: &str) -> Result<JwkSet, IntrospectionError> {
     let client: Client = Client::new();
-    let openid_config = discover(idm_url).await.map_err(|err| {
-        IntrospectionError::DiscoveryError { source: err }
-    })?;
+    let openid_config = discover(idm_url)
+        .await
+        .map_err(|err| IntrospectionError::DiscoveryError { source: err })?;
     let jwks_url = openid_config.jwks_uri().url().as_ref();
-    let response = client
-        .get(jwks_url)
-        .send()
-        .await?;
-    let jwks_keys: JwkSet = response.json::<JwkSet>().await.map_err(|err| IntrospectionError::RequestFailed {origin: "Could not fetch jwks keys because ".to_string(), source: err })?;
+    let response = client.get(jwks_url).send().await?;
+    let jwks_keys: JwkSet =
+        response
+            .json::<JwkSet>()
+            .await
+            .map_err(|err| IntrospectionError::RequestFailed {
+                origin: "Could not fetch jwks keys because ".to_string(),
+                source: err,
+            })?;
     Ok(jwks_keys)
 }
 
-
-pub async fn local_jwt_validation<U>(issuers: &[&str],
-                                  audiences: &[&str],
-                                  jwks_keys: JwkSet,
-                                  token: &str, ) -> Result<U, IntrospectionError>
-
+pub async fn local_jwt_validation<U>(
+    issuers: &[&str],
+    audiences: &[&str],
+    jwks_keys: JwkSet,
+    token: &str,
+) -> Result<U, IntrospectionError>
 where
     U: DeserializeOwned,
 {
-
-    let unverified_token_header: Header = decode_header(token).map_err(|source| IntrospectionError::JsonWebTokenErrors { source })?;
+    let unverified_token_header: Header =
+        decode_header(token).map_err(|source| IntrospectionError::JsonWebTokenErrors { source })?;
     let user_kid = match unverified_token_header.kid {
         Some(k) => k,
         None => return Err(IntrospectionError::MissingJwksKey),
@@ -369,16 +375,21 @@ where
         match &j.algorithm {
             AlgorithmParameters::RSA(rsa) => {
                 let decoding_key = DecodingKey::from_rsa_components(&rsa.n, &rsa.e)?;
-                let algorithm_key = j.common.key_algorithm.ok_or(IntrospectionError::JWTUnsupportedAlgorithm)?;
+                let algorithm_key = j
+                    .common
+                    .key_algorithm
+                    .ok_or(IntrospectionError::JWTUnsupportedAlgorithm)?;
                 let algorithm_str = format!("{}", algorithm_key);
-                let algorithm = Algorithm::from_str(&algorithm_str).map_err(|source| IntrospectionError::JsonWebTokenErrors { source })?;
+                let algorithm = Algorithm::from_str(&algorithm_str)
+                    .map_err(|source| IntrospectionError::JsonWebTokenErrors { source })?;
                 let mut validation = Validation::new(algorithm);
                 validation.set_audience(audiences);
                 validation.leeway = 5;
                 validation.set_issuer(issuers);
                 validation.validate_exp = true;
 
-                let decoded_token: TokenData<U> = decode::<U>(token, &decoding_key, &validation).map_err(|source| IntrospectionError::JsonWebTokenErrors { source })?;
+                let decoded_token: TokenData<U> = decode::<U>(token, &decoding_key, &validation)
+                    .map_err(|source| IntrospectionError::JsonWebTokenErrors { source })?;
                 Ok(decoded_token.claims)
             }
             _ => unreachable!("Not yet Implemented or supported by Zitadel"),
@@ -388,15 +399,14 @@ where
     }
 }
 
-
 #[cfg(test)]
 mod tests {
     #![allow(clippy::all)]
 
+    use super::*;
+    use crate::credentials::{AuthenticationOptions, ServiceAccount};
     use crate::oidc::discovery::discover;
     use openidconnect::TokenIntrospectionResponse;
-    use crate::credentials::{AuthenticationOptions, ServiceAccount};
-    use super::*;
 
     const ZITADEL_URL: &str = "https://zitadel-libraries-l8boqa.zitadel.cloud";
     const ZITADEL_URL_ALTER: &str = "https://ferris-hk3otq.us1.zitadel.cloud";
@@ -413,7 +423,7 @@ mod tests {
     const PERSONAL_ACCESS_TOKEN: &str =
         "dEnGhIFs3VnqcQU5D2zRSeiarB1nwH6goIKY0J8MWZbsnWcTuu1C59lW9DgCq1y096GYdXA";
 
-    const PERSONAL_ACCESS_TOKEN_ALTER : &str =
+    const PERSONAL_ACCESS_TOKEN_ALTER: &str =
         "KyX1Pw1bVfYFSE0g6s3Io12I4sC-feEtkaShWstZJ0h34JHfE29q4oIOJFF0PZlfMDvaCvk";
 
     #[derive(Debug, serde::Deserialize, serde::Serialize)]
@@ -437,18 +447,18 @@ mod tests {
         pub taste: Option<String>,
         #[serde(rename = "year")]
         pub anum: Option<i32>,
-     }
+    }
 
-     pub trait ExtIntrospectedUser {
+    pub trait ExtIntrospectedUser {
         fn custom_claims(&self) -> Result<CustomClaims, serde_json::Error>;
-     }
-     impl ExtIntrospectedUser for ZitadelIntrospectionResponse {
-         fn custom_claims(&self) -> Result<CustomClaims, serde_json::Error> {
+    }
+    impl ExtIntrospectedUser for ZitadelIntrospectionResponse {
+        fn custom_claims(&self) -> Result<CustomClaims, serde_json::Error> {
             let as_value = serde_json::to_value(self)?;
-             let custom_claims: CustomClaims = serde_json::from_value(as_value)?;
+            let custom_claims: CustomClaims = serde_json::from_value(as_value)?;
             Ok(custom_claims)
         }
-     }
+    }
 
     #[tokio::test]
     async fn introspect_fails_with_invalid_url() {
@@ -536,13 +546,30 @@ mod tests {
         //
 
         let sa = ServiceAccount::load_from_json(SERVICE_ACCOUNT).unwrap();
-        let access_token = sa.authenticate_with_options(ZITADEL_URL_ALTER, &AuthenticationOptions {
-          scopes: vec!["profile".to_string(), "email".to_string(), "urn:zitadel:iam:user:resourceowner".to_string()],
-           ..Default::default()
-         }).await.unwrap();
+        let access_token = sa
+            .authenticate_with_options(
+                ZITADEL_URL_ALTER,
+                &AuthenticationOptions {
+                    scopes: vec![
+                        "profile".to_string(),
+                        "email".to_string(),
+                        "urn:zitadel:iam:user:resourceowner".to_string(),
+                    ],
+                    ..Default::default()
+                },
+            )
+            .await
+            .unwrap();
         // move fetch_jwks after login has jwks can be purged after 30 hours of no login
         let jwks: JwkSet = fetch_jwks(ZITADEL_URL_ALTER).await.unwrap();
-        let result: CustomClaims = local_jwt_validation::<CustomClaims>(&ZITADEL_ISSUERS, &ZITADEL_AUDIENCES, jwks, &access_token).await.unwrap();
+        let result: CustomClaims = local_jwt_validation::<CustomClaims>(
+            &ZITADEL_ISSUERS,
+            &ZITADEL_AUDIENCES,
+            jwks,
+            &access_token,
+        )
+        .await
+        .unwrap();
         assert_eq!(result.taste.unwrap(), "funk");
         assert_eq!(result.anum.unwrap(), 2025);
     }
@@ -565,8 +592,8 @@ mod tests {
             },
             PERSONAL_ACCESS_TOKEN_ALTER,
         )
-            .await
-            .unwrap();
+        .await
+        .unwrap();
 
         let custom_claims = result.custom_claims().unwrap();
 
