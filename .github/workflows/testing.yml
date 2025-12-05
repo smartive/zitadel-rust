@@ -23,7 +23,7 @@ jobs:
       - uses: arduino/setup-protoc@v1
         with:
           repo-token: ${{ secrets.GITHUB_TOKEN }}
-      - run: cargo install protoc-gen-prost protoc-gen-prost-crate protoc-gen-tonic
+      - run: cargo install protoc-gen-prost-crate
       - name: generated grpc code
         run: just
       - run: cargo clippy --all-features --no-deps
