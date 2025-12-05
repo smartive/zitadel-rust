@@ -35,9 +35,6 @@ Required tooling:
 
 - [just](https://just.systems)
 - [buf](https://buf.build)
-- [protoc](https://grpc.io/docs/protoc-installation/)
-- `protoc-gen-prost`: `cargo install protoc-gen-prost`
-- `protoc-gen-tonic`: `cargo install protoc-gen-tonic`
 - `protoc-gen-prost-crate`: `cargo install protoc-gen-prost-crate`
 
 Installing the tools is also partially available via `just install-tools`.

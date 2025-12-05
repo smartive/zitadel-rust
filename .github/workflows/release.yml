@@ -18,9 +18,6 @@ jobs:
       - uses: extractions/setup-just@v3
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
-      - uses: arduino/setup-protoc@v1
-        with:
-          repo-token: ${{ secrets.GITHUB_TOKEN }}
       - run: cargo install protoc-gen-prost-crate
       - name: generated grpc code
         run: just
