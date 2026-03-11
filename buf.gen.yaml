@@ -1,20 +1,20 @@
 # buf.gen.yaml
-version: v1
+version: v2
 managed:
   enabled: true
 plugins:
-  - plugin: prost
+  - remote: buf.build/community/neoeinstein-prost:v0.5.0
     out: crates/zitadel-gen/src/api/
     opt:
       - compile_well_known_types
       - extern_path=.google.protobuf=::pbjson_types
-  - plugin: tonic
+  - remote: buf.build/community/neoeinstein-tonic:v0.5.0
     out: crates/zitadel-gen/src/api/
     opt:
       - compile_well_known_types
       - extern_path=.google.protobuf=::pbjson_types
       - no_server
-  - name: prost-crate
+  - local: protoc-gen-prost-crate
     out: ./crates/zitadel-gen
     strategy: all
     opt:

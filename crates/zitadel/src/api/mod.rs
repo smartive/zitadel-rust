@@ -5,7 +5,6 @@
 //! Further contains interceptors that may be used to
 //! authenticate the clients to ZITADEL with credentials.
 
-
 pub mod clients;
 #[allow(clippy::all)]
 #[cfg(feature = "api")]

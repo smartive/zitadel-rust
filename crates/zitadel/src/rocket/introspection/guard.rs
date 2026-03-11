@@ -8,21 +8,20 @@ use std::collections::BTreeSet;
 use std::collections::HashMap;
 
 #[cfg(feature = "rocket_okapi")]
+use crate::oidc::introspection::{introspect, IntrospectionError, ZitadelIntrospectionResponse};
+use crate::rocket::introspection::IntrospectionConfig;
+#[cfg(feature = "rocket_okapi")]
 use rocket_okapi::{
     gen::OpenApiGenerator,
     okapi::openapi3::{
-        Object, Responses, SecurityRequirement, SecurityScheme, SecuritySchemeData, MediaType,
-        RefOr, Response,
+        MediaType, Object, RefOr, Response, Responses, SecurityRequirement, SecurityScheme,
+        SecuritySchemeData,
     },
     okapi::Map,
     request::{OpenApiFromRequest, RequestHeaderInput},
 };
 #[cfg(feature = "rocket_okapi")]
 use schemars::schema::{InstanceType, ObjectValidation, Schema, SchemaObject};
-#[cfg(feature = "rocket_okapi")]
-
-use crate::oidc::introspection::{introspect, IntrospectionError, ZitadelIntrospectionResponse};
-use crate::rocket::introspection::IntrospectionConfig;
 
 use super::config::IntrospectionRocketConfig;
 
@@ -235,9 +234,13 @@ impl<'a> OpenApiFromRequest<'a> for &'a IntrospectedUser {
                     );
                     properties
                 },
-                required: vec!["code".to_owned(), "reason".to_owned(), "description".to_owned()]
-                    .into_iter()
-                    .collect::<BTreeSet<_>>(), // Convert Vec to BTreeSet
+                required: vec![
+                    "code".to_owned(),
+                    "reason".to_owned(),
+                    "description".to_owned(),
+                ]
+                .into_iter()
+                .collect::<BTreeSet<_>>(), // Convert Vec to BTreeSet
                 ..Default::default()
             })),
             ..Default::default()
@@ -251,7 +254,9 @@ impl<'a> OpenApiFromRequest<'a> for &'a IntrospectedUser {
                     properties.insert("error".to_owned(), Schema::Object(error_detail_schema));
                     properties
                 },
-                required: vec!["error".to_owned()].into_iter().collect::<BTreeSet<_>>(), // Convert Vec to BTreeSet
+                required: vec!["error".to_owned()]
+                    .into_iter()
+                    .collect::<BTreeSet<_>>(), // Convert Vec to BTreeSet
                 ..Default::default()
             })),
             ..Default::default()
@@ -273,7 +278,8 @@ impl<'a> OpenApiFromRequest<'a> for &'a IntrospectedUser {
             content: content.clone(),
             ..Default::default()
         };
-        res.responses.insert("400".to_owned(), RefOr::Object(bad_request_response));
+        res.responses
+            .insert("400".to_owned(), RefOr::Object(bad_request_response));
 
         // Adding 401 Unauthorized response
         let unauthorized_response = Response {
@@ -281,10 +287,12 @@ impl<'a> OpenApiFromRequest<'a> for &'a IntrospectedUser {
             content: content.clone(),
             ..Default::default()
         };
-        res.responses.insert("401".to_owned(), RefOr::Object(unauthorized_response));
+        res.responses
+            .insert("401".to_owned(), RefOr::Object(unauthorized_response));
 
         Ok(res)
-    }}
+    }
+}
 
 #[cfg(test)]
 mod tests {

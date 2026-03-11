@@ -132,10 +132,10 @@ impl ClientBuilder<NoInterceptor> {
 impl<T> ClientBuilder<T>
 where
     T: BuildInterceptedService,
-    T::Target: tonic::client::GrpcService<tonic::body::BoxBody>,
-    <T::Target as tonic::client::GrpcService<tonic::body::BoxBody>>::ResponseBody:
+    T::Target: tonic::client::GrpcService<tonic::body::Body>,
+    <T::Target as tonic::client::GrpcService<tonic::body::Body>>::ResponseBody:
         Body<Data = Bytes> + Send + 'static,
-    <<T::Target as tonic::client::GrpcService<tonic::body::BoxBody>>::ResponseBody as Body>::Error:
+    <<T::Target as tonic::client::GrpcService<tonic::body::Body>>::ResponseBody as Body>::Error:
         Into<StdError> + Send,
 {
     /// Create a new [`AdminServiceClient`].
@@ -305,7 +305,6 @@ async fn get_channel(api_endpoint: &str) -> Result<Channel, ClientError> {
         .await
         .map_err(|_| ClientError::ConnectionError)
 }
-
 
 #[cfg(test)]
 mod tests {
