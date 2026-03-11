@@ -368,7 +368,7 @@ mod tests {
         use std::ops::Add;
         use std::sync::Arc;
 
-        async fn app_witch_cache(cache: impl IntrospectionCache + 'static) -> Router {
+        async fn app_with_cache(cache: impl IntrospectionCache + 'static) -> Router {
             let introspection_state = IntrospectionStateBuilder::new(ZITADEL_URL)
                 .with_jwt_profile(Application::load_from_json(APPLICATION).unwrap())
                 .with_introspection_cache(cache)
@@ -391,7 +391,7 @@ mod tests {
         #[tokio::test]
         async fn guard_uses_cached_response() {
             let cache = Arc::new(InMemoryIntrospectionCache::default());
-            let app = app_witch_cache(cache.clone()).await;
+            let app = app_with_cache(cache.clone()).await;
 
             let mut res = ZitadelIntrospectionResponse::new(
                 true,
@@ -428,7 +428,7 @@ mod tests {
         #[tokio::test]
         async fn guard_caches_response() {
             let cache = Arc::new(InMemoryIntrospectionCache::default());
-            let app = app_witch_cache(cache.clone()).await;
+            let app = app_with_cache(cache.clone()).await;
 
             let response = app
                 .oneshot(
