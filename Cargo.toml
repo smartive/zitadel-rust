@@ -171,7 +171,7 @@ tokio = { version = "1.37.0", optional = true, features = [
   "rt-multi-thread",
 ] }
 tonic = { version = "0.14.2", features = [
-  "tls-ring",
+  "tls-aws-lc",
 ], optional = true }
 rocket_okapi = { version = "0.9.0", optional = true, default-features = false }
 schemars = {version = "0.8.21", optional = true}
