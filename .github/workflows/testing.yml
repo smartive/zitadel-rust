@@ -25,3 +25,21 @@ jobs:
         run: just
       - run: cargo clippy --all-features --no-deps
       - run: cargo test --all-features
+
+  package_check:
+    name: Package Verification
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions-rust-lang/setup-rust-toolchain@v1
+      - uses: bufbuild/buf-setup-action@v1
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+      - uses: extractions/setup-just@v3
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+      - run: cargo install protoc-gen-prost-crate
+      - name: generated grpc code
+        run: just
+      - name: Verify package
+        run: cargo package --allow-dirty
