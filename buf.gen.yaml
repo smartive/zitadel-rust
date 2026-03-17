@@ -4,19 +4,19 @@ managed:
   enabled: true
 plugins:
   - remote: buf.build/community/neoeinstein-prost:v0.5.0
-    out: crates/zitadel-gen/src/api/
+    out: src/api/generated
     opt:
       - compile_well_known_types
       - extern_path=.google.protobuf=::pbjson_types
   - remote: buf.build/community/neoeinstein-tonic:v0.5.0
-    out: crates/zitadel-gen/src/api/
+    out: src/api/generated
     opt:
       - compile_well_known_types
       - extern_path=.google.protobuf=::pbjson_types
       - no_server
   - local: protoc-gen-prost-crate
-    out: ./crates/zitadel-gen
+    out: .
     strategy: all
     opt:
-      - gen_crate=./crates/zitadel-gen/Cargo.toml
-      - include_file=src/api/mod.rs
+      - gen_crate
+      - include_file=src/api/generated/mod.rs
