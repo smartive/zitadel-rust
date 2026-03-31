@@ -9,7 +9,6 @@ pub use generated::zitadel;
 
 pub mod clients;
 #[allow(clippy::all)]
-#[cfg(feature = "api")]
 mod generated;
 #[cfg(feature = "interceptors")]
 pub mod interceptors;
