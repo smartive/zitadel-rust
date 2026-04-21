@@ -22,7 +22,7 @@ jobs:
       - name: generated grpc code
         run: just
       - name: Semantic Release
-        uses: cycjimmy/semantic-release-action@v4
+        uses: cycjimmy/semantic-release-action@v6.0.0
         with:
           extra_plugins: |
             semantic-release-cargo
