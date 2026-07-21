@@ -31,7 +31,7 @@ use crate::credentials::{AuthenticationOptions, ServiceAccount};
 ///
 /// ```
 /// # #[tokio::main]
-/// # async fn main() -> Result<(), Box<dyn std::error::Error>> {
+/// # async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync + 'static>> {
 /// use zitadel::api::{
 ///     clients::ClientBuilder, zitadel::auth::v1::GetMyUserRequest,
 /// };
@@ -99,7 +99,7 @@ impl Interceptor for AccessTokenInterceptor {
 ///
 /// ```
 /// # #[tokio::main]
-/// # async fn main() -> Result<(), Box<dyn std::error::Error>> {
+/// # async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync + 'static>> {
 /// use zitadel::{
 ///     api::{clients::ClientBuilder, zitadel::auth::v1::GetMyUserRequest},
 ///     credentials::{AuthenticationOptions, ServiceAccount},

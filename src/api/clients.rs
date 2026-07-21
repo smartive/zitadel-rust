@@ -4,8 +4,7 @@
 //! specific interceptors for authentication.
 
 use std::error::Error;
-
-use custom_error::custom_error;
+use thiserror::Error;
 use tonic::codegen::{Body, Bytes, InterceptedService, StdError};
 use tonic::service::Interceptor;
 
@@ -37,12 +36,15 @@ use crate::api::zitadel::system::v1::system_service_client::SystemServiceClient;
 #[cfg(feature = "interceptors")]
 use crate::credentials::{AuthenticationOptions, ServiceAccount};
 
-custom_error! {
-    /// Errors that may occur when creating a client.
-    pub ClientError
-        InvalidUrl = "the provided url is invalid",
-        ConnectionError = "could not connect to provided endpoint",
-        TlsInitializationError = "could not setup tls connection",
+/// Errors that may occur when creating a client.
+#[derive(Debug, Error)]
+pub enum ClientError {
+    #[error("the provided url is invalid")]
+    InvalidUrl,
+    #[error("could not connect to provided endpoint")]
+    ConnectionError,
+    #[error("could not setup tls connection")]
+    TlsInitializationError,
 }
 
 /// A builder to create configured gRPC clients for ZITADEL API access.
@@ -146,7 +148,9 @@ where
     /// cannot be parsed into a valid URL or if the connection to the endpoint
     /// is not possible.
     #[cfg(feature = "api-admin-v1")]
-    pub async fn build_admin_client(self) -> Result<AdminServiceClient<T::Target>, Box<dyn Error>> {
+    pub async fn build_admin_client(
+        self,
+    ) -> Result<AdminServiceClient<T::Target>, Box<dyn Error + Send + Sync + 'static>> {
         let channel = self
             .interceptor
             .build_service(get_channel(&self.api_endpoint).await?);
@@ -161,7 +165,9 @@ where
     /// cannot be parsed into a valid URL or if the connection to the endpoint
     /// is not possible.
     #[cfg(feature = "api-auth-v1")]
-    pub async fn build_auth_client(self) -> Result<AuthServiceClient<T::Target>, Box<dyn Error>> {
+    pub async fn build_auth_client(
+        self,
+    ) -> Result<AuthServiceClient<T::Target>, Box<dyn Error + Send + Sync + 'static>> {
         let channel = self
             .interceptor
             .build_service(get_channel(&self.api_endpoint).await?);
@@ -178,7 +184,7 @@ where
     #[cfg(feature = "api-management-v1")]
     pub async fn build_management_client(
         self,
-    ) -> Result<ManagementServiceClient<T::Target>, Box<dyn Error>> {
+    ) -> Result<ManagementServiceClient<T::Target>, Box<dyn Error + Send + Sync + 'static>> {
         let channel = self
             .interceptor
             .build_service(get_channel(&self.api_endpoint).await?);
@@ -193,7 +199,9 @@ where
     /// cannot be parsed into a valid URL or if the connection to the endpoint
     /// is not possible.
     #[cfg(feature = "api-oidc-v2")]
-    pub async fn build_oidc_client(self) -> Result<OidcServiceClient<T::Target>, Box<dyn Error>> {
+    pub async fn build_oidc_client(
+        self,
+    ) -> Result<OidcServiceClient<T::Target>, Box<dyn Error + Send + Sync + 'static>> {
         let channel = self
             .interceptor
             .build_service(get_channel(&self.api_endpoint).await?);
@@ -210,7 +218,7 @@ where
     #[cfg(feature = "api-org-v2")]
     pub async fn build_organization_client(
         self,
-    ) -> Result<OrganizationServiceClient<T::Target>, Box<dyn Error>> {
+    ) -> Result<OrganizationServiceClient<T::Target>, Box<dyn Error + Send + Sync + 'static>> {
         let channel = self
             .interceptor
             .build_service(get_channel(&self.api_endpoint).await?);
@@ -227,7 +235,7 @@ where
     #[cfg(feature = "api-session-v2")]
     pub async fn build_session_client(
         self,
-    ) -> Result<SessionServiceClient<T::Target>, Box<dyn Error>> {
+    ) -> Result<SessionServiceClient<T::Target>, Box<dyn Error + Send + Sync + 'static>> {
         let channel = self
             .interceptor
             .build_service(get_channel(&self.api_endpoint).await?);
@@ -244,7 +252,7 @@ where
     #[cfg(feature = "api-settings-v2")]
     pub async fn build_settings_client(
         self,
-    ) -> Result<SettingsServiceClient<T::Target>, Box<dyn Error>> {
+    ) -> Result<SettingsServiceClient<T::Target>, Box<dyn Error + Send + Sync + 'static>> {
         let channel = self
             .interceptor
             .build_service(get_channel(&self.api_endpoint).await?);
@@ -261,7 +269,7 @@ where
     #[cfg(feature = "api-system-v1")]
     pub async fn build_system_client(
         self,
-    ) -> Result<SystemServiceClient<T::Target>, Box<dyn Error>> {
+    ) -> Result<SystemServiceClient<T::Target>, Box<dyn Error + Send + Sync + 'static>> {
         let channel = self
             .interceptor
             .build_service(get_channel(&self.api_endpoint).await?);
@@ -276,7 +284,9 @@ where
     /// cannot be parsed into a valid URL or if the connection to the endpoint
     /// is not possible.
     #[cfg(feature = "api-user-v2")]
-    pub async fn build_user_client(self) -> Result<UserServiceClient<T::Target>, Box<dyn Error>> {
+    pub async fn build_user_client(
+        self,
+    ) -> Result<UserServiceClient<T::Target>, Box<dyn Error + Send + Sync + 'static>> {
         let channel = self
             .interceptor
             .build_service(get_channel(&self.api_endpoint).await?);

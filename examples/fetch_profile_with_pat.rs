@@ -1,7 +1,7 @@
 use zitadel::api::{clients::ClientBuilder, zitadel::auth::v1::GetMyUserRequest};
 
 #[tokio::main]
-async fn main() -> Result<(), Box<dyn std::error::Error>> {
+async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync + 'static>> {
     const PERSONAL_ACCESS_TOKEN: &str =
         "dEnGhIFs3VnqcQU5D2zRSeiarB1nwH6goIKY0J8MWZbsnWcTuu1C59lW9DgCq1y096GYdXA";
     const ZITADEL_URL: &str = "https://zitadel-libraries-l8boqa.zitadel.cloud";
