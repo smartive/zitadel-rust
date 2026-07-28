@@ -1,16 +1,21 @@
-use custom_error::custom_error;
-
 use crate::actix::introspection::config::IntrospectionConfig;
 use crate::credentials::Application;
 use crate::oidc::discovery::{discover, DiscoveryError};
 use crate::oidc::introspection::AuthorityAuthentication;
+use thiserror::Error;
 
-custom_error! {
-    /// Error type for introspection config builder related errors.
-    pub IntrospectionConfigBuilderError
-        NoAuthSchema = "no authentication for authority defined",
-        Discovery{source: DiscoveryError} = "could not fetch discovery document: {source}",
-        NoIntrospectionUrl = "discovery document did not contain an introspection url",
+/// Error type for introspection config builder related errors.
+#[derive(Debug, Error)]
+pub enum IntrospectionConfigBuilderError {
+    #[error("no authentication for authority defined")]
+    NoAuthSchema,
+    #[error("could not fetch discovery document: {source}")]
+    Discovery {
+        #[from]
+        source: DiscoveryError,
+    },
+    #[error("discovery document did not contain an introspection url")]
+    NoIntrospectionUrl,
 }
 
 /// Builder for [IntrospectionConfig]s.
@@ -74,7 +79,7 @@ impl IntrospectionConfigBuilder {
     ///
     /// ```
     /// # #[tokio::main]
-    /// # async fn main() -> Result<(), Box<dyn std::error::Error>>{
+    /// # async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync + 'static>>{
     /// # use zitadel::credentials::Application;
     /// # use zitadel::actix::introspection::IntrospectionConfigBuilder;
     /// # const APPLICATION: &str = r#"
@@ -99,7 +104,7 @@ impl IntrospectionConfigBuilder {
     ///
     /// ```
     /// # #[tokio::main]
-    /// # async fn main() -> Result<(), Box<dyn std::error::Error>>{
+    /// # async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync + 'static>>{
     /// # use zitadel::actix::introspection::IntrospectionConfigBuilder;
     /// let config = IntrospectionConfigBuilder::new("https://zitadel-libraries-l8boqa.zitadel.cloud")
     ///                 .with_basic_auth(

@@ -1,25 +1,34 @@
 use std::{future::Future, pin::Pin};
 
+use crate::actix::introspection::config::IntrospectionConfig;
+use crate::oidc::introspection::{introspect, IntrospectionError, ZitadelIntrospectionResponse};
 use actix_web::dev::Payload;
 use actix_web::error::{ErrorInternalServerError, ErrorUnauthorized};
 use actix_web::{Error, FromRequest, HttpRequest};
-use custom_error::custom_error;
 use openidconnect::TokenIntrospectionResponse;
 use std::collections::HashMap;
+use thiserror::Error;
 
-use crate::actix::introspection::config::IntrospectionConfig;
-use crate::oidc::introspection::{introspect, IntrospectionError, ZitadelIntrospectionResponse};
-
-custom_error! {
-    /// Error type for extractor related errors.
-    pub IntrospectionExtractorError
-        MissingConfig = "no introspection config given to actix app data",
-        Unauthorized = "no HTTP authorization header found",
-        InvalidHeader = "authorization header is invalid",
-        WrongScheme = "Authorization header is not a bearer token",
-        Introspection{source: IntrospectionError} = "introspection returned an error: {source}",
-        Inactive = "access token is inactive",
-        NoUserId = "introspection result contained no user id",
+/// Error type for extractor related errors.
+#[derive(Debug, Error)]
+pub enum IntrospectionExtractorError {
+    #[error("no introspection config given to actix app data")]
+    MissingConfig,
+    #[error("no HTTP authorization header found")]
+    Unauthorized,
+    #[error("authorization header is invalid")]
+    InvalidHeader,
+    #[error("Authorization header is not a bearer token")]
+    WrongScheme,
+    #[error("introspection returned an error: {source}")]
+    Introspection {
+        #[from]
+        source: IntrospectionError,
+    },
+    #[error("access token is inactive")]
+    Inactive,
+    #[error("introspection result contained no user id")]
+    NoUserId,
 }
 
 /// Struct for the handler function that requires an authenticated user.

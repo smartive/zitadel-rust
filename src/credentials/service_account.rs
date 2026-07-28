@@ -1,4 +1,4 @@
-use custom_error::custom_error;
+use crate::credentials::jwt::JwtClaims;
 use jsonwebtoken::{encode, Algorithm, EncodingKey, Header};
 use openidconnect::{
     core::{CoreProviderMetadata, CoreTokenType},
@@ -11,8 +11,7 @@ use reqwest::{
 };
 use serde::{Deserialize, Serialize};
 use std::fs::read_to_string;
-
-use crate::credentials::jwt::JwtClaims;
+use thiserror::Error;
 
 /// A service account for [ZITADEL](https://zitadel.ch/). The service
 /// account can be loaded from a valid JSON string or from a file containing the JSON string.
@@ -63,19 +62,46 @@ pub struct AuthenticationOptions {
     pub project_audiences: Vec<String>,
 }
 
-custom_error! {
-    /// Error type for service account related errors.
-    pub ServiceAccountError
-        Io{source: std::io::Error} = "unable to read from file: {source}",
-        Json{source: serde_json::Error} = "could not parse json: {source}",
-        Key{source: jsonwebtoken::errors::Error} = "could not parse RSA key: {source}",
-        AudienceUrl{source: openidconnect::url::ParseError} = "audience url could not be parsed: {source}",
-        DiscoveryError{source: Box<dyn std::error::Error>} = "could not discover OIDC document: {source}",
-        TokenEndpointMissing = "OIDC document does not contain token endpoint",
-        HttpError{source: openidconnect::reqwest::Error} = "http error: {source}",
-        UrlEncodeError = "could not encode url params for token request",
-        TokenError = "could not fetch token from endpoint",
-        AccessTokenMissing = "token response does not contain access token",
+/// Error type for service account related errors.
+#[derive(Debug, Error)]
+pub enum ServiceAccountError {
+    #[error("unable to read from file: {source}")]
+    Io {
+        #[from]
+        source: std::io::Error,
+    },
+    #[error("could not parse json: {source}")]
+    Json {
+        #[from]
+        source: serde_json::Error,
+    },
+    #[error("could not parse RSA key: {source}")]
+    Key {
+        #[from]
+        source: jsonwebtoken::errors::Error,
+    },
+    #[error("audience url could not be parsed: {source}")]
+    AudienceUrl {
+        #[from]
+        source: openidconnect::url::ParseError,
+    },
+    #[error("could not discover OIDC document: {source}")]
+    DiscoveryError {
+        source: Box<dyn std::error::Error + Send + Sync + 'static>,
+    },
+    #[error("OIDC document does not contain token endpoint")]
+    TokenEndpointMissing,
+    #[error("http error: {source}")]
+    HttpError {
+        #[from]
+        source: openidconnect::reqwest::Error,
+    },
+    #[error("could not encode url params for token request")]
+    UrlEncodeError,
+    #[error("could not fetch token from endpoint")]
+    TokenError,
+    #[error("token response does not contain access token")]
+    AccessTokenMissing,
 }
 
 impl ServiceAccount {
@@ -93,7 +119,7 @@ impl ServiceAccount {
     /// use zitadel::credentials::ServiceAccount;
     /// let service_account = ServiceAccount::load_from_file("./my_json_key.json")?;
     /// println!("{:#?}", service_account);
-    /// # Ok::<(), Box<dyn std::error::Error>>(())
+    /// # Ok::<(), Box<dyn std::error::Error + Send + Sync + 'static>>(())
     /// ```
     pub fn load_from_file(file_path: &str) -> Result<Self, ServiceAccountError> {
         let data = read_to_string(file_path).map_err(|e| ServiceAccountError::Io { source: e })?;
@@ -113,7 +139,7 @@ impl ServiceAccount {
     /// use zitadel::credentials::ServiceAccount;
     /// let service_account = ServiceAccount::load_from_json(r#"{"keyId": "1337", "userId": "42", "key": "foobar"}"#)?;
     /// println!("{:#?}", service_account);
-    /// # Ok::<(), Box<dyn std::error::Error>>(())
+    /// # Ok::<(), Box<dyn std::error::Error + Send + Sync + 'static>>(())
     /// ```
     pub fn load_from_json(json: &str) -> Result<Self, ServiceAccountError> {
         let sa: ServiceAccount =
@@ -142,7 +168,7 @@ impl ServiceAccount {
     ///
     /// ```
     /// # #[tokio::main]
-    /// # async fn main() -> Result<(), Box<dyn std::error::Error>>{
+    /// # async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync + 'static>>{
     /// # const SERVICE_ACCOUNT: &str = r#"
     /// # {
     /// #     "type": "serviceaccount",
@@ -186,7 +212,7 @@ impl ServiceAccount {
     ///
     /// ```
     /// # #[tokio::main]
-    /// # async fn main() -> Result<(), Box<dyn std::error::Error>>{
+    /// # async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync + 'static>>{
     /// # const SERVICE_ACCOUNT: &str = r#"
     /// # {
     /// #     "type": "serviceaccount",
@@ -211,7 +237,7 @@ impl ServiceAccount {
     ///
     /// ```
     /// # #[tokio::main]
-    /// # async fn main() -> Result<(), Box<dyn std::error::Error>>{
+    /// # async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync + 'static>>{
     /// # const SERVICE_ACCOUNT: &str = r#"
     /// # {
     /// #     "type": "serviceaccount",
