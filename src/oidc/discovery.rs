@@ -1,4 +1,3 @@
-use custom_error::custom_error;
 use openidconnect::{
     core::{
         CoreAuthDisplay, CoreClaimName, CoreClaimType, CoreClientAuthMethod, CoreGrantType,
@@ -8,13 +7,23 @@ use openidconnect::{
     url, AdditionalProviderMetadata, IntrospectionUrl, IssuerUrl, ProviderMetadata, RevocationUrl,
 };
 use serde::{Deserialize, Serialize};
+use thiserror::Error;
 
-custom_error! {
-    /// Error type for discovery related errors.
-    pub DiscoveryError
-        IssuerUrl{source: url::ParseError} = "could not parse issuer url: {source}",
-        DiscoveryDocument = "could not discover OIDC document",
-        DiscoveryClientError{source: reqwest::Error} = "could not fetch discovery document: {source}",
+/// Error type for discovery related errors.
+#[derive(Debug, Error)]
+pub enum DiscoveryError {
+    #[error("could not parse issuer url: {source}")]
+    IssuerUrl {
+        #[from]
+        source: url::ParseError,
+    },
+    #[error("could not discover OIDC document")]
+    DiscoveryDocument,
+    #[error("could not fetch discovery document: {source}")]
+    DiscoveryClientError {
+        #[from]
+        source: reqwest::Error,
+    },
 }
 
 /// Fetch the well-known [OIDC Discovery](https://openid.net/specs/openid-connect-discovery-1_0.html)
@@ -38,7 +47,7 @@ custom_error! {
 ///
 /// ```
 /// # #[tokio::main]
-/// # async fn main() -> Result<(), Box<dyn std::error::Error>>{
+/// # async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync + 'static>>{
 /// use zitadel::oidc::discovery::discover;
 /// let authority = "https://zitadel-libraries-l8boqa.zitadel.cloud";
 /// let metadata = discover(authority).await?;

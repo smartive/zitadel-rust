@@ -1,4 +1,3 @@
-use custom_error::custom_error;
 use openidconnect::TokenIntrospectionResponse;
 use rocket::figment::Figment;
 use rocket::http::Status;
@@ -7,6 +6,7 @@ use rocket::{async_trait, Request};
 use std::collections::BTreeSet;
 use std::collections::HashMap;
 
+use super::config::IntrospectionRocketConfig;
 #[cfg(feature = "rocket_okapi")]
 use crate::oidc::introspection::{introspect, IntrospectionError, ZitadelIntrospectionResponse};
 use crate::rocket::introspection::IntrospectionConfig;
@@ -22,19 +22,28 @@ use rocket_okapi::{
 };
 #[cfg(feature = "rocket_okapi")]
 use schemars::schema::{InstanceType, ObjectValidation, Schema, SchemaObject};
+use thiserror::Error;
 
-use super::config::IntrospectionRocketConfig;
-
-custom_error! {
-    /// Error type for guard related errors.
-    pub IntrospectionGuardError
-        MissingConfig = "no introspection config given to rocket managed state",
-        Unauthorized = "no HTTP authorization header found",
-        InvalidHeader = "authorization header is invalid",
-        WrongScheme = "Authorization header is not a bearer token",
-        Introspection{source: IntrospectionError} = "introspection returned an error: {source}",
-        Inactive = "access token is inactive",
-        NoUserId = "introspection result contained no user id",
+/// Error type for guard related errors.
+#[derive(Debug, Error)]
+pub enum IntrospectionGuardError {
+    #[error("no introspection config given to rocket managed state")]
+    MissingConfig,
+    #[error("no HTTP authorization header found")]
+    Unauthorized,
+    #[error("authorization header is invalid")]
+    InvalidHeader,
+    #[error("Authorization header is not a bearer token")]
+    WrongScheme,
+    #[error("introspection returned an error: {source}")]
+    Introspection {
+        #[from]
+        source: IntrospectionError,
+    },
+    #[error("access token is inactive")]
+    Inactive,
+    #[error("introspection result contained no user id")]
+    NoUserId,
 }
 
 /// Struct for the injected route guard that requires an authenticated user.
