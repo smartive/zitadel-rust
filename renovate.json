@@ -5,7 +5,9 @@
     "enabled": true,
     "packageRules": [
       {
-        "matchFiles": [".gitmodules"],
+        "matchFileNames": [
+          ".gitmodules"
+        ],
         "groupName": "external submodules",
         "groupSlug": "submodules",
         "semanticCommitType": "chore",
