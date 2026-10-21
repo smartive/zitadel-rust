@@ -19,7 +19,7 @@ async fn authed(user: IntrospectedUser) -> impl IntoResponse {
 }
 
 #[tokio::main]
-async fn main() -> Result<(), Box<dyn std::error::Error>> {
+async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync + 'static>> {
     let is = IntrospectionStateBuilder::new("https://zitadel-libraries-l8boqa.zitadel.cloud")
         .with_basic_auth(
             "194339055499018497@zitadel_rust_test",

@@ -1,6 +1,5 @@
 use crate::credentials::{Application, ApplicationError};
 use crate::oidc::discovery::{discover, DiscoveryError};
-use custom_error::custom_error;
 use jsonwebtoken::jwk::{AlgorithmParameters, JwkSet};
 use jsonwebtoken::{decode, decode_header, Algorithm, DecodingKey, Header, TokenData, Validation};
 use openidconnect::url::{ParseError, Url};
@@ -14,30 +13,75 @@ use std::collections::HashMap;
 use std::error::Error;
 use std::fmt::{Debug, Display};
 use std::str::FromStr;
+use thiserror::Error;
 
 #[cfg(feature = "introspection_cache")]
 pub mod cache;
 
-custom_error! {
-    /// Error type for introspection related errors.
-    pub IntrospectionError
-        HttpClientError{source: reqwest::Error} = "could not create http client: {source}",
-        RequestFailed{origin: String, source: openidconnect::reqwest::Error} = "{origin} request did fail: {source}",
-        PayloadSerialization = "could not correctly serialize introspection payload",
-        JWTProfile{source: ApplicationError} = "could not create signed jwt key: {source}",
-        ParseUrl{source: ParseError} = "could not parse url: {source}",
-        ParseResponse{source: serde_json::Error} = "could not parse introspection response: {source}",
-        DecodeResponse{source: base64::DecodeError} = "could not decode base64 metadata: {source}",
-        ResponseError{source: ZitadelResponseError} = "received error response from Zitadel: {source}",
-        DiscoveryError{source: DiscoveryError} = "Discovery error during introspection: {source}",
-        JWTUnsupportedAlgorithm = "unsupported algorithm in JWT",
-        MissingJwksKey = "missing key in jwks",
-        JsonWebTokenErrors{source: jsonwebtoken::errors::Error} = @{ match source.kind() {
+/// Error type for introspection related errors.
+#[derive(Debug, Error)]
+pub enum IntrospectionError {
+    #[error("could not create http client: {source}")]
+    HttpClientError {
+        #[from]
+        source: reqwest::Error,
+    },
+    #[error("{origin} request did fail: {source}")]
+    RequestFailed {
+        origin: String,
+        source: openidconnect::reqwest::Error,
+    },
+    #[error("could not correctly serialize introspection payload")]
+    PayloadSerialization,
+    #[error("could not create signed jwt key: {source}")]
+    JWTProfile {
+        #[from]
+        source: ApplicationError,
+    },
+    #[error("could not parse url: {source}")]
+    ParseUrl {
+        #[from]
+        source: ParseError,
+    },
+    #[error("could not parse introspection response: {source}")]
+    ParseResponse {
+        #[from]
+        source: serde_json::Error,
+    },
+    #[error("could not decode base64 metadata: {source}")]
+    DecodeResponse {
+        #[from]
+        source: base64::DecodeError,
+    },
+    #[error("received error response from Zitadel: {source}")]
+    ResponseError {
+        #[from]
+        source: ZitadelResponseError,
+    },
+    #[error("Discovery error during introspection: {source}")]
+    DiscoveryError {
+        #[from]
+        source: DiscoveryError,
+    },
+    #[error("unsupported algorithm in JWT")]
+    JWTUnsupportedAlgorithm,
+    #[error("missing key in jwks")]
+    MissingJwksKey,
+    #[error("{}", Self::format_jsonwebtoken_error(&source))]
+    JsonWebTokenErrors {
+        #[from]
+        source: jsonwebtoken::errors::Error,
+    },
+}
+
+impl IntrospectionError {
+    fn format_jsonwebtoken_error(err: &jsonwebtoken::errors::Error) -> &str {
+        match err.kind() {
             jsonwebtoken::errors::ErrorKind::InvalidToken => "Invalid JWT string, missing the 3 . segments, JKWS validation won't work with opaque tokens, make sure you've switched to JWT tokens or use instead the instropect method",
             jsonwebtoken::errors::ErrorKind::InvalidAlgorithmName => "Invalid Algorithm in JWKS",
             _ => "Other JWT error"
-        }},
-
+        }
+    }
 }
 
 /// Introspection response information that is returned by the ZITADEL
@@ -239,7 +283,7 @@ fn payload(
 ///
 /// ```
 /// # #[tokio::main]
-/// # async fn main() -> Result<(), Box<dyn std::error::Error>>{
+/// # async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync + 'static>>{
 /// # use zitadel::oidc::discovery::discover;
 /// # use zitadel::oidc::introspection::{AuthorityAuthentication, introspect};
 /// let auth = AuthorityAuthentication::Basic {

@@ -1,10 +1,9 @@
-use custom_error::custom_error;
+use crate::credentials::jwt::JwtClaims;
 use jsonwebtoken::{encode, Algorithm, EncodingKey, Header};
 use serde::{Deserialize, Serialize};
 use std::fs::read_to_string;
 use std::path::Path;
-
-use crate::credentials::jwt::JwtClaims;
+use thiserror::Error;
 
 /// Application for [ZITADEL](https://zitadel.ch/). An application is an OIDC application type
 /// that allows a backend (for example an API for some single page application) to
@@ -28,12 +27,24 @@ pub struct Application {
     key: String,
 }
 
-custom_error! {
-    /// Error type for application credential related errors.
-    pub ApplicationError
-        Io{source: std::io::Error} = "unable to read from file: {source}",
-        Json{source: serde_json::Error} = "could not parse json: {source}",
-        Key{source: jsonwebtoken::errors::Error} = "could not parse RSA key: {source}",
+/// Error type for application credential related errors.
+#[derive(Debug, Error)]
+pub enum ApplicationError {
+    #[error("unable to read from file: {source}")]
+    Io {
+        #[from]
+        source: std::io::Error,
+    },
+    #[error("could not parse json: {source}")]
+    Json {
+        #[from]
+        source: serde_json::Error,
+    },
+    #[error("could not parse RSA key: {source}")]
+    Key {
+        #[from]
+        source: jsonwebtoken::errors::Error,
+    },
 }
 
 impl Application {
@@ -51,7 +62,7 @@ impl Application {
     /// use zitadel::credentials::Application;
     /// let application = Application::load_from_file("./my_json_key.json")?;
     /// println!("{:#?}", application);
-    /// # Ok::<(), Box<dyn std::error::Error>>(())
+    /// # Ok::<(), Box<dyn std::error::Error + Send + Sync + 'static>>(())
     /// ```
     pub fn load_from_file<P: AsRef<Path>>(file_path: P) -> Result<Self, ApplicationError> {
         let data = read_to_string(file_path).map_err(|e| ApplicationError::Io { source: e })?;
@@ -71,7 +82,7 @@ impl Application {
     /// use zitadel::credentials::Application;
     /// let application = Application::load_from_json(r#"{"keyId": "1337", "clientId": "testing", "userId": "42", "key": "foobar", "appId": "myapp"}"#)?;
     /// println!("{:#?}", application);
-    /// # Ok::<(), Box<dyn std::error::Error>>(())
+    /// # Ok::<(), Box<dyn std::error::Error + Send + Sync + 'static>>(())
     /// ```
     pub fn load_from_json(json: &str) -> Result<Self, ApplicationError> {
         let sa: Application =
